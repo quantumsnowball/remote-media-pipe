@@ -1,3 +1,5 @@
+mod ssdp;
+
 use clap::Parser;
 
 #[derive(Parser)]
