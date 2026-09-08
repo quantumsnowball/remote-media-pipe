@@ -3,11 +3,8 @@ use tokio::net::UdpSocket;
 use uuid::Uuid;
 
 pub struct Server {
-    host: String,
-    port: u16,
     ssdp_ip: Ipv4Addr,
     ssdp_port: u16,
-    document: &'static str,
     media_type: &'static str,
     server_type: &'static str,
     uuid: Uuid,
@@ -22,11 +19,8 @@ impl Server {
         let location = format!("http://{host}:{port}/{document}");
 
         Self {
-            host,
-            port,
             ssdp_ip,
             ssdp_port,
-            document,
             media_type: "urn:schemas-upnp-org:device:MediaServer:1",
             server_type: "Linux/3.4 DLNADOC/1.50 UPnP/1.0 DMS/1.0",
             uuid: Uuid::new_v4(),
