@@ -1,3 +1,4 @@
+mod dlna;
 mod ssdp;
 
 use clap::Parser;
@@ -27,17 +28,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let host = target.ip().to_string();
     let port = target.port();
 
-    // Instantiate the SSDP Server from ssdp.rs
+    // Instantiate both SSDP and DLNA servers sharing the same UUID
     let ssdp_server = ssdp::Server::new(host, port);
+    let dlna_server = dlna::Server::new(*target, ssdp_server.uuid());
 
-    // 1. Advertise on launch
+    // 1. Advertise SSDP presence on launch
     ssdp_server.advertise().await?;
 
-    // 2. Listen loop concurrent with Ctrl+C graceful shutdown signal
+    // 2. Run both SSDP and DLNA listening loops concurrently alongside Ctrl+C
     tokio::select! {
         res = ssdp_server.listen() => {
             if let Err(e) = res {
                 eprintln!("[ERROR] SSDP Server error: {e}");
+            }
+        }
+        res = dlna_server.listen() => {
+            if let Err(e) = res {
+                eprintln!("[ERROR] DLNA Server error: {e}");
             }
         }
         _ = tokio::signal::ctrl_c() => {
