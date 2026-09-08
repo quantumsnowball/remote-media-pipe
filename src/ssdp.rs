@@ -28,6 +28,10 @@ impl Server {
         }
     }
 
+    pub fn uuid(&self) -> String {
+        self.uuid.to_string()
+    }
+
     /// Construct a NOTIFY advertisement message for a specific NT header value
     fn build_notify_message(&self, nt: &str) -> Vec<u8> {
         format!(
