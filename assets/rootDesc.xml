@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+  <specVersion>
+    <major>1</major>
+    <minor>0</minor>
+  </specVersion>
+  <device>
+    <deviceType>urn:schemas-upnp-org:device:MediaServer:1</deviceType>
+    <friendlyName>Remote Media Pipe</friendlyName>
+    <manufacturer>RemoteMediaPipe</manufacturer>
+    <modelName>Remote Media Proxy</modelName>
+    <modelNumber>0.1</modelNumber>
+    <UDN>uuid:{{UUID}}</UDN>
+    <serviceList>
+      <service>
+        <serviceType>urn:schemas-upnp-org:service:ContentDirectory:1</serviceType>
+        <serviceId>urn:upnp-org:serviceId:ContentDirectory</serviceId>
+        <SCPDURL>/xml/ContentDirectory.xml</SCPDURL>
+        <controlURL>/ctl/ContentDirectory</controlURL>
+        <eventSubURL>/evt/ContentDirectory</eventSubURL>
+      </service>
+      <service>
+        <serviceType>urn:schemas-upnp-org:service:ConnectionManager:1</serviceType>
+        <serviceId>urn:upnp-org:serviceId:ConnectionManager</serviceId>
+        <SCPDURL>/xml/ConnectionManager.xml</SCPDURL>
+        <controlURL>/ctl/ConnectionManager</controlURL>
+        <eventSubURL>/evt/ConnectionManager</eventSubURL>
+      </service>
+    </serviceList>
+  </device>
+</root>
+
