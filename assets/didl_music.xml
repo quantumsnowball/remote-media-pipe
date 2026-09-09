@@ -1,0 +1,8 @@
+&lt;DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/"&gt;
+  &lt;item id="201" parentID="2" restricted="1"&gt;
+    &lt;dc:title&gt;Dummy Audio Stream&lt;/dc:title&gt;
+    &lt;upnp:class&gt;object.item.audioItem.musicTrack&lt;/upnp:class&gt;
+    &lt;res protocolInfo="http-get:*:audio/mpeg:*"&gt;https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3&lt;/res&gt;
+  &lt;/item&gt;
+&lt;/DIDL-Lite&gt;
+

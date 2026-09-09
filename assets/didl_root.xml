@@ -1,0 +1,16 @@
+&lt;DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/"&gt;
+  &lt;container id="1" parentID="0" restricted="1" searchable="0" childCount="2"&gt;
+    &lt;dc:title&gt;Movies &amp; Videos&lt;/dc:title&gt;
+    &lt;upnp:class&gt;object.container.storageFolder&lt;/upnp:class&gt;
+  &lt;/container&gt;
+  &lt;container id="2" parentID="0" restricted="1" searchable="0" childCount="1"&gt;
+    &lt;dc:title&gt;Music &amp; Audio&lt;/dc:title&gt;
+    &lt;upnp:class&gt;object.container.storageFolder&lt;/upnp:class&gt;
+  &lt;/container&gt;
+  &lt;item id="3" parentID="0" restricted="1"&gt;
+    &lt;dc:title&gt;Direct Root Stream (Tears of Steel)&lt;/dc:title&gt;
+    &lt;upnp:class&gt;object.item.videoItem.movie&lt;/upnp:class&gt;
+    &lt;res protocolInfo="http-get:*:video/mp4:DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000"&gt;http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4&lt;/res&gt;
+  &lt;/item&gt;
+&lt;/DIDL-Lite&gt;
+
