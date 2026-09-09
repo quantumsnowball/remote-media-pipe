@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let port = target.port();
 
     let ssdp_server = Arc::new(SsdpServer::new(&host, port));
-    let dlna_server = DlnaServer::new(&ssdp_server.uuid(), &host, port);
+    let dlna_server = DlnaServer::new(&ssdp_server.uuid());
 
     // 1. Spawn Axum HTTP Server Task
     let target_addr = *target;

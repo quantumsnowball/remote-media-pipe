@@ -1,8 +1,8 @@
 use axum::{
     Router,
     extract::State,
-    http::{StatusCode, header},
-    response::{IntoResponse, Response},
+    http::header,
+    response::IntoResponse,
     routing::{get, post},
 };
 use std::net::SocketAddr;
@@ -24,7 +24,7 @@ const SOAP_BROWSE_WRAPPER: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
   <s:Body>
     <u:BrowseResponse xmlns:u="urn:schemas-upnp-org:service:ContentDirectory:1">
-      <Result>{}</Result>
+      <Result><![CDATA[{}]]></Result>
       <NumberReturned>3</NumberReturned>
       <TotalMatches>3</TotalMatches>
       <UpdateID>1</UpdateID>
@@ -35,7 +35,6 @@ const SOAP_BROWSE_WRAPPER: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 #[derive(Clone)]
 pub struct DlnaState {
     pub uuid: String,
-    pub host_port: String,
 }
 
 pub struct DlnaServer {
@@ -43,11 +42,10 @@ pub struct DlnaServer {
 }
 
 impl DlnaServer {
-    pub fn new(uuid: &str, host: &str, port: u16) -> Self {
+    pub fn new(uuid: &str) -> Self {
         Self {
             state: Arc::new(DlnaState {
                 uuid: uuid.to_string(),
-                host_port: format!("{}:{}", host, port),
             }),
         }
     }

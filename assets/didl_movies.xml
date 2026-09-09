@@ -1,13 +1,13 @@
-&lt;DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/"&gt;
-  &lt;item id="101" parentID="1" restricted="1"&gt;
-    &lt;dc:title&gt;Big Buck Bunny (Remote 4K Video)&lt;/dc:title&gt;
-    &lt;upnp:class&gt;object.item.videoItem.movie&lt;/upnp:class&gt;
-    &lt;res protocolInfo="http-get:*:video/mp4:DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000"&gt;http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4&lt;/res&gt;
-  &lt;/item&gt;
-  &lt;item id="102" parentID="1" restricted="1"&gt;
-    &lt;dc:title&gt;Sintel (Remote 1080p Video)&lt;/dc:title&gt;
-    &lt;upnp:class&gt;object.item.videoItem.movie&lt;/upnp:class&gt;
-    &lt;res protocolInfo="http-get:*:video/mp4:DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000"&gt;http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4&lt;/res&gt;
-  &lt;/item&gt;
-&lt;/DIDL-Lite&gt;
+<DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/">
+  <item id="101" parentID="1" restricted="1">
+    <dc:title>Big Buck Bunny (Remote 4K Video)</dc:title>
+    <upnp:class>object.item.videoItem.movie</upnp:class>
+    <res protocolInfo="http-get:*:video/mp4:DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000">http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4</res>
+  </item>
+  <item id="102" parentID="1" restricted="1">
+    <dc:title>Sintel (Remote 1080p Video)</dc:title>
+    <upnp:class>object.item.videoItem.movie</upnp:class>
+    <res protocolInfo="http-get:*:video/mp4:DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000">http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4</res>
+  </item>
+</DIDL-Lite>
 
