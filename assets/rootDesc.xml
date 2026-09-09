@@ -43,21 +43,21 @@
         <serviceType>urn:schemas-upnp-org:service:ContentDirectory:1</serviceType>
         <serviceId>urn:upnp-org:serviceId:ContentDirectory</serviceId>
         <SCPDURL>/ContentDirectory.xml</SCPDURL>
-        <controlURL>/ctl</controlURL>
+        <controlURL>/ctl/ContentDirectory</controlURL>
         <eventSubURL></eventSubURL>
       </service>
       <service>
         <serviceType>urn:schemas-upnp-org:service:ConnectionManager:1</serviceType>
         <serviceId>urn:upnp-org:serviceId:ConnectionManager</serviceId>
         <SCPDURL>/ConnectionManager.xml</SCPDURL>
-        <controlURL>/ctl</controlURL>
+        <controlURL>/ctl/ConnectionManager</controlURL>
         <eventSubURL></eventSubURL>
       </service>
       <service>
         <serviceType>urn:microsoft.com:service:X_MS_MediaReceiverRegistrar:1</serviceType>
         <serviceId>urn:microsoft.com:serviceId:X_MS_MediaReceiverRegistrar</serviceId>
         <SCPDURL>/X_MS_MediaReceiverRegistrar.xml</SCPDURL>
-        <controlURL>/ctl</controlURL>
+        <controlURL>/ctl/X_MS_MediaReceiverRegistrar</controlURL>
         <eventSubURL></eventSubURL>
       </service>
     </serviceList>
