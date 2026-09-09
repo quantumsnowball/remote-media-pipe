@@ -73,11 +73,15 @@ impl DlnaServer {
 }
 
 async fn handle_root_desc(State(state): State<Arc<DlnaState>>) -> impl IntoResponse {
+    println!("[INFO] handle_root_desc");
+
     let xml = XML_ROOT_DESC.replace("{UUID}", &state.uuid);
     ([(header::CONTENT_TYPE, "text/xml; charset=utf-8")], xml)
 }
 
 async fn handle_cd_scpd() -> impl IntoResponse {
+    println!("[INFO] handle_cd_scpd");
+
     (
         [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
         XML_CD_SCPD,
@@ -85,6 +89,8 @@ async fn handle_cd_scpd() -> impl IntoResponse {
 }
 
 async fn handle_cm_scpd() -> impl IntoResponse {
+    println!("[INFO] handle_cm_scpd");
+
     (
         [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
         XML_CM_SCPD,
@@ -92,6 +98,8 @@ async fn handle_cm_scpd() -> impl IntoResponse {
 }
 
 async fn handle_connection_manager() -> impl IntoResponse {
+    println!("[INFO] handle_connection_manager");
+
     (
         [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
         XML_CM_SOAP_RESP,
@@ -99,6 +107,8 @@ async fn handle_connection_manager() -> impl IntoResponse {
 }
 
 async fn handle_content_directory(body: String) -> impl IntoResponse {
+    println!("[INFO] handle_content_directory");
+
     if !body.contains("Browse") {
         return (
             [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
