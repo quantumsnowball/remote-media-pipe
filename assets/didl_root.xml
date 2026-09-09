@@ -1,10 +1,10 @@
 <DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/">
   <container id="1" parentID="0" restricted="1" searchable="0" childCount="2">
-    <dc:title>Movies &amp; Videos</dc:title>
+    <dc:title>Movies and Videos</dc:title>
     <upnp:class>object.container.storageFolder</upnp:class>
   </container>
   <container id="2" parentID="0" restricted="1" searchable="0" childCount="1">
-    <dc:title>Music &amp; Audio</dc:title>
+    <dc:title>Music and Audio</dc:title>
     <upnp:class>object.container.storageFolder</upnp:class>
   </container>
   <item id="3" parentID="0" restricted="1">
