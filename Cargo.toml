@@ -8,6 +8,7 @@ name = "remote-media-pipe"
 path = "src/main.rs"
 
 [dependencies]
+axum = "0.8.9"
 clap = { version = "4.6.6", features = ["derive"] }
 log = "0.4.34"
 socket2 = "0.6.5"
