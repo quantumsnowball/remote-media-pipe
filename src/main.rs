@@ -1,16 +1,18 @@
-mod dlna;
-mod ssdp;
-
 use clap::Parser;
 use std::net::SocketAddr;
+use std::sync::Arc;
+use std::sync::atomic::Ordering;
 
-#[derive(Parser)]
-#[command(version, about = "A zero-copy remote media streaming proxy")]
+mod ssdp;
+use ssdp::Server;
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
 struct Cli {
-    /// Remote source (e.g. qsc:DLNA/ or gdrive:folder_id)
+    /// Remote address/host
     remote: String,
 
-    /// Target listen address (e.g. 192.168.1.100:7879)
+    /// Target socket address (e.g., 192.168.1.50:8080)
     target: SocketAddr,
 }
 
@@ -24,33 +26,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Remote : {remote}");
     println!("Target : {target}");
 
-    // Extract host IP and port from the target SocketAddr
     let host = target.ip().to_string();
     let port = target.port();
 
-    // Instantiate both SSDP and DLNA servers sharing the same UUID
-    let ssdp_server = ssdp::Server::new(host, port);
-    let dlna_server = dlna::Server::new(*target, ssdp_server.uuid());
+    let server = Arc::new(Server::new(&host, port));
 
-    // 1. Advertise SSDP presence on launch
-    ssdp_server.advertise().await?;
+    // Send initial advertisement broadcast
+    server.advertise()?;
 
-    // 2. Run both SSDP and DLNA listening loops concurrently alongside Ctrl+C
-    tokio::select! {
-        res = ssdp_server.listen() => {
-            if let Err(e) = res {
-                eprintln!("[ERROR] SSDP Server error: {e}");
-            }
-        }
-        res = dlna_server.listen() => {
-            if let Err(e) = res {
-                eprintln!("[ERROR] DLNA Server error: {e}");
-            }
-        }
-        _ = tokio::signal::ctrl_c() => {
-            println!("\n[INFO] Received Ctrl+C, shutting down gracefully...");
-        }
-    }
+    let server_clone = Arc::clone(&server);
+    let shutdown_signal = server.shutdown_handle();
 
+    // Spawn SSDP listener
+    let handle = tokio::task::spawn_blocking(move || {
+        if let Err(e) = server_clone.listen() {
+            eprintln!("[ERROR] SSDP server error: {e}");
+        }
+    });
+
+    // Wait for Ctrl+C
+    tokio::signal::ctrl_c().await?;
+    println!("\nReceived Ctrl+C, shutting down SSDP server...");
+
+    // Stop loop and join thread
+    shutdown_signal.store(false, Ordering::SeqCst);
+    let _ = handle.await;
+
+    println!("Shutdown complete.");
     Ok(())
 }
