@@ -20,7 +20,7 @@ const DIDL_ROOT: &str = include_str!("../assets/didl_root.xml");
 const DIDL_MOVIES: &str = include_str!("../assets/didl_movies.xml");
 const DIDL_MUSIC: &str = include_str!("../assets/didl_music.xml");
 
-const SOAP_BROWSE_WRAPPER: &str = include_str!("../assets/_soap_browse_wrapper.xml");
+const SOAP_BROWSE_WRAPPER: &str = include_str!("../assets/soap_browse_wrapper.xml");
 
 
 #[derive(Clone)]
