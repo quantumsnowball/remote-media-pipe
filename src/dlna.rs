@@ -11,8 +11,8 @@ use tokio::net::TcpListener;
 
 // Compile-time static assets
 const XML_ROOT_DESC: &str = include_str!("../assets/rootDesc.xml");
-const XML_CD_SCPD: &str = include_str!("../assets/cd.xml");
-const XML_CM_SCPD: &str = include_str!("../assets/cm.xml");
+const XML_CD_SCPD: &str = include_str!("../assets/ConnectionManager.xml");
+const XML_CM_SCPD: &str = include_str!("../assets/ConnectionManager.xml");
 const XML_CM_SOAP_RESP: &str = include_str!("../assets/cm_soap_response.xml");
 const XML_CD_SYSTEM_UPDATE: &str = include_str!("../assets/cd_system_update.xml");
 
@@ -20,17 +20,8 @@ const DIDL_ROOT: &str = include_str!("../assets/didl_root.xml");
 const DIDL_MOVIES: &str = include_str!("../assets/didl_movies.xml");
 const DIDL_MUSIC: &str = include_str!("../assets/didl_music.xml");
 
-const SOAP_BROWSE_WRAPPER: &str = r#"<?xml version="1.0" encoding="utf-8"?>
-<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
-  <s:Body>
-    <u:BrowseResponse xmlns:u="urn:schemas-upnp-org:service:ContentDirectory:1">
-      <Result><![CDATA[{}]]></Result>
-      <NumberReturned>3</NumberReturned>
-      <TotalMatches>3</TotalMatches>
-      <UpdateID>1</UpdateID>
-    </u:BrowseResponse>
-  </s:Body>
-</s:Envelope>"#;
+const SOAP_BROWSE_WRAPPER: &str = include_str!("../assets/soap_browse_wrapper.xml");
+
 
 #[derive(Clone)]
 pub struct DlnaState {
@@ -53,10 +44,10 @@ impl DlnaServer {
     pub async fn run(&self, addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
         let app = Router::new()
             .route("/rootDesc.xml", get(handle_root_desc))
-            .route("/cd.xml", get(handle_cd_scpd))
-            .route("/cm.xml", get(handle_cm_scpd))
-            .route("/ctl/ContentDirectory", post(handle_content_directory))
-            .route("/ctl/ConnectionManager", post(handle_connection_manager))
+            .route("/ContentDirectory.xml", get(handle_content_directory))
+            .route("/ConnectionManager.xml", get(handle_connection_manager))
+            .route("/ctl/ContentDirectory", post(handle_ctl_content_directory))
+            .route("/ctl/ConnectionManager", post(handle_ctl_connection_manager))
             .with_state(self.state.clone());
 
         let listener = TcpListener::bind(addr).await?;
@@ -65,8 +56,7 @@ impl DlnaServer {
         axum::serve(
             listener,
             app.into_make_service_with_connect_info::<SocketAddr>(),
-        )
-        .await?;
+        ).await?;
 
         Ok(())
     }
@@ -76,24 +66,18 @@ async fn handle_root_desc(State(state): State<Arc<DlnaState>>) -> impl IntoRespo
     println!("[INFO] handle_root_desc");
 
     let xml = XML_ROOT_DESC.replace("{UUID}", &state.uuid);
-    ([(header::CONTENT_TYPE, "text/xml; charset=utf-8")], xml)
+    (
+        [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
+        xml
+    )
 }
 
-async fn handle_cd_scpd() -> impl IntoResponse {
-    println!("[INFO] handle_cd_scpd");
+async fn handle_content_directory() -> impl IntoResponse {
+    println!("[INFO] handle_content_directory");
 
     (
         [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
         XML_CD_SCPD,
-    )
-}
-
-async fn handle_cm_scpd() -> impl IntoResponse {
-    println!("[INFO] handle_cm_scpd");
-
-    (
-        [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
-        XML_CM_SCPD,
     )
 }
 
@@ -102,12 +86,21 @@ async fn handle_connection_manager() -> impl IntoResponse {
 
     (
         [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
+        XML_CM_SCPD,
+    )
+}
+
+async fn handle_ctl_connection_manager() -> impl IntoResponse {
+    println!("[INFO] handle_ctl_connection_manager");
+
+    (
+        [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
         XML_CM_SOAP_RESP,
     )
 }
 
-async fn handle_content_directory(body: String) -> impl IntoResponse {
-    println!("[INFO] handle_content_directory");
+async fn handle_ctl_content_directory(body: String) -> impl IntoResponse {
+    println!("[INFO] handle_ctl_content_directory");
 
     if !body.contains("Browse") {
         return (
