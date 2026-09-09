@@ -20,17 +20,8 @@ const DIDL_ROOT: &str = include_str!("../assets/didl_root.xml");
 const DIDL_MOVIES: &str = include_str!("../assets/didl_movies.xml");
 const DIDL_MUSIC: &str = include_str!("../assets/didl_music.xml");
 
-const SOAP_BROWSE_WRAPPER: &str = r#"<?xml version="1.0" encoding="utf-8"?>
-<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
-  <s:Body>
-    <u:BrowseResponse xmlns:u="urn:schemas-upnp-org:service:ContentDirectory:1">
-      <Result><![CDATA[{}]]></Result>
-      <NumberReturned>3</NumberReturned>
-      <TotalMatches>3</TotalMatches>
-      <UpdateID>1</UpdateID>
-    </u:BrowseResponse>
-  </s:Body>
-</s:Envelope>"#;
+const SOAP_BROWSE_WRAPPER: &str = include_str!("../assets/_soap_browse_wrapper.xml");
+
 
 #[derive(Clone)]
 pub struct DlnaState {
