@@ -3,8 +3,11 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
+mod dlna;
 mod ssdp;
-use ssdp::Server;
+
+use dlna::DlnaServer;
+use ssdp::Server as SsdpServer;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -12,7 +15,7 @@ struct Cli {
     /// Remote address/host
     remote: String,
 
-    /// Target socket address (e.g., 192.168.1.50:8080)
+    /// Target socket address (e.g., 192.168.1.81:7879)
     target: SocketAddr,
 }
 
@@ -29,28 +32,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let host = target.ip().to_string();
     let port = target.port();
 
-    let server = Arc::new(Server::new(&host, port));
+    let ssdp_server = Arc::new(SsdpServer::new(&host, port));
+    let dlna_server = DlnaServer::new(&ssdp_server.uuid(), &host, port);
 
-    // Send initial advertisement broadcast
-    server.advertise()?;
+    // 1. Spawn Axum HTTP Server Task
+    let target_addr = *target;
+    tokio::spawn(async move {
+        if let Err(e) = dlna_server.run(target_addr).await {
+            eprintln!("[ERROR] DLNA HTTP Server failed: {e}");
+        }
+    });
 
-    let server_clone = Arc::clone(&server);
-    let shutdown_signal = server.shutdown_handle();
+    // 2. Broadcast SSDP Announcement
+    ssdp_server.advertise()?;
 
-    // Spawn SSDP listener
-    let handle = tokio::task::spawn_blocking(move || {
-        if let Err(e) = server_clone.listen() {
+    // 3. Spawn SSDP Listener Thread
+    let ssdp_clone = Arc::clone(&ssdp_server);
+    let shutdown_signal = ssdp_server.shutdown_handle();
+
+    let ssdp_handle = tokio::task::spawn_blocking(move || {
+        if let Err(e) = ssdp_clone.listen() {
             eprintln!("[ERROR] SSDP server error: {e}");
         }
     });
 
-    // Wait for Ctrl+C
+    // 4. Handle Graceful Exit
     tokio::signal::ctrl_c().await?;
-    println!("\nReceived Ctrl+C, shutting down SSDP server...");
+    println!("\nReceived Ctrl+C, shutting down...");
 
-    // Stop loop and join thread
     shutdown_signal.store(false, Ordering::SeqCst);
-    let _ = handle.await;
+    let _ = ssdp_handle.await;
 
     println!("Shutdown complete.");
     Ok(())

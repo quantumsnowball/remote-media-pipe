@@ -27,6 +27,11 @@ impl Server {
         }
     }
 
+    /// Expose UUID for DLNA HTTP Server initialization
+    pub fn uuid(&self) -> String {
+        self.uuid.to_string()
+    }
+
     /// Returns a handle to signal shutdown
     pub fn shutdown_handle(&self) -> Arc<AtomicBool> {
         Arc::clone(&self.running)
