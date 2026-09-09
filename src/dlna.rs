@@ -1,96 +1,125 @@
+use axum::{
+    Router,
+    extract::State,
+    http::header,
+    response::IntoResponse,
+    routing::{get, post},
+};
 use std::net::SocketAddr;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::{TcpListener, TcpStream};
+use std::sync::Arc;
+use tokio::net::TcpListener;
 
-const ROOT_DESC_TEMPLATE: &str = include_str!("../assets/rootDesc.xml");
+// Compile-time static assets
+const XML_ROOT_DESC: &str = include_str!("../assets/rootDesc.xml");
+const XML_CD_SCPD: &str = include_str!("../assets/cd.xml");
+const XML_CM_SCPD: &str = include_str!("../assets/cm.xml");
+const XML_CM_SOAP_RESP: &str = include_str!("../assets/cm_soap_response.xml");
+const XML_CD_SYSTEM_UPDATE: &str = include_str!("../assets/cd_system_update.xml");
 
-// Static dummy folder listing for DLNA / UPnP players
-const DUMMY_DIDL_RESPONSE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+const DIDL_ROOT: &str = include_str!("../assets/didl_root.xml");
+const DIDL_MOVIES: &str = include_str!("../assets/didl_movies.xml");
+const DIDL_MUSIC: &str = include_str!("../assets/didl_music.xml");
+
+const SOAP_BROWSE_WRAPPER: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
   <s:Body>
     <u:BrowseResponse xmlns:u="urn:schemas-upnp-org:service:ContentDirectory:1">
-      <Result>&lt;DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/"&gt;
-        &lt;container id="1" parentID="0" restricted="1"&gt;
-          &lt;dc:title&gt;Dummy Movies&lt;/dc:title&gt;
-          &lt;upnp:class&gt;object.container.storageFolder&lt;/upnp:class&gt;
-        &lt;/container&gt;
-        &lt;container id="2" parentID="0" restricted="1"&gt;
-          &lt;dc:title&gt;Dummy Shows&lt;/dc:title&gt;
-          &lt;upnp:class&gt;object.container.storageFolder&lt;/upnp:class&gt;
-        &lt;/container&gt;
-      &lt;/DIDL-Lite&gt;</Result>
-      <NumberReturned>2</NumberReturned>
-      <TotalMatches>2</TotalMatches>
+      <Result><![CDATA[{}]]></Result>
+      <NumberReturned>3</NumberReturned>
+      <TotalMatches>3</TotalMatches>
       <UpdateID>1</UpdateID>
     </u:BrowseResponse>
   </s:Body>
 </s:Envelope>"#;
 
-pub struct Server {
-    addr: SocketAddr,
-    uuid: String,
+#[derive(Clone)]
+pub struct DlnaState {
+    pub uuid: String,
 }
 
-impl Server {
-    pub fn new(addr: SocketAddr, uuid: String) -> Self {
-        Self { addr, uuid }
+pub struct DlnaServer {
+    state: Arc<DlnaState>,
+}
+
+impl DlnaServer {
+    pub fn new(uuid: &str) -> Self {
+        Self {
+            state: Arc::new(DlnaState {
+                uuid: uuid.to_string(),
+            }),
+        }
     }
 
-    fn build_root_desc(&self) -> String {
-        ROOT_DESC_TEMPLATE.replace("{{UUID}}", &self.uuid)
-    }
+    pub async fn run(&self, addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
+        let app = Router::new()
+            .route("/rootDesc.xml", get(handle_root_desc))
+            .route("/cd.xml", get(handle_cd_scpd))
+            .route("/cm.xml", get(handle_cm_scpd))
+            .route("/ctl/ContentDirectory", post(handle_content_directory))
+            .route("/ctl/ConnectionManager", post(handle_connection_manager))
+            .with_state(self.state.clone());
 
-    async fn handle_client(&self, mut stream: TcpStream) -> Result<(), Box<dyn std::error::Error>> {
-        let mut buf = [0u8; 2048];
-        let bytes_read = stream.read(&mut buf).await?;
+        let listener = TcpListener::bind(addr).await?;
+        println!("[INFO] Axum DLNA HTTP Server running on http://{}", addr);
 
-        if bytes_read == 0 {
-            return Ok(());
-        }
-
-        let request = String::from_utf8_lossy(&buf[..bytes_read]);
-
-        // 1. Device Description Endpoint
-        if request.contains("GET /rootDesc.xml") {
-            let body = self.build_root_desc();
-            let response = format!(
-                "HTTP/1.1 200 OK\r\n\
-                Content-Type: text/xml; charset=\"utf-8\"\r\n\
-                Content-Length: {}\r\n\
-                Connection: close\r\n\r\n{}",
-                body.len(),
-                body
-            );
-            stream.write_all(response.as_bytes()).await?;
-        }
-        // 2. ContentDirectory Browse Endpoint (SOAP POST)
-        else if request.contains("POST /ctl/ContentDirectory") || request.contains("Browse") {
-            let response = format!(
-                "HTTP/1.1 200 OK\r\n\
-                Content-Type: text/xml; charset=\"utf-8\"\r\n\
-                Content-Length: {}\r\n\
-                Connection: close\r\n\r\n{}",
-                DUMMY_DIDL_RESPONSE.len(),
-                DUMMY_DIDL_RESPONSE
-            );
-            stream.write_all(response.as_bytes()).await?;
-        }
-        // 3. Fallback for unhandled endpoints
-        else {
-            let response = "HTTP/1.1 404 NOT FOUND\r\nContent-Length: 0\r\n\r\n";
-            stream.write_all(response.as_bytes()).await?;
-        }
+        axum::serve(
+            listener,
+            app.into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .await?;
 
         Ok(())
     }
+}
 
-    pub async fn listen(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let listener = TcpListener::bind(self.addr).await?;
-        println!("[INFO] DLNA HTTP Server listening on http://{}", self.addr);
+async fn handle_root_desc(State(state): State<Arc<DlnaState>>) -> impl IntoResponse {
+    let xml = XML_ROOT_DESC.replace("{UUID}", &state.uuid);
+    ([(header::CONTENT_TYPE, "text/xml; charset=utf-8")], xml)
+}
 
-        loop {
-            let (stream, _) = listener.accept().await?;
-            let _ = self.handle_client(stream).await;
-        }
+async fn handle_cd_scpd() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
+        XML_CD_SCPD,
+    )
+}
+
+async fn handle_cm_scpd() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
+        XML_CM_SCPD,
+    )
+}
+
+async fn handle_connection_manager() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
+        XML_CM_SOAP_RESP,
+    )
+}
+
+async fn handle_content_directory(body: String) -> impl IntoResponse {
+    if !body.contains("Browse") {
+        return (
+            [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
+            XML_CD_SYSTEM_UPDATE.to_string(),
+        )
+            .into_response();
     }
+
+    let didl_content = if body.contains("ObjectID>1") || body.contains("ObjectID&gt;1") {
+        DIDL_MOVIES
+    } else if body.contains("ObjectID>2") || body.contains("ObjectID&gt;2") {
+        DIDL_MUSIC
+    } else {
+        DIDL_ROOT
+    };
+
+    let response_xml = SOAP_BROWSE_WRAPPER.replace("{}", didl_content);
+
+    (
+        [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
+        response_xml,
+    )
+        .into_response()
 }

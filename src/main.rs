@@ -1,16 +1,21 @@
+use clap::Parser;
+use std::net::SocketAddr;
+use std::sync::Arc;
+use std::sync::atomic::Ordering;
+
 mod dlna;
 mod ssdp;
 
-use clap::Parser;
-use std::net::SocketAddr;
+use dlna::DlnaServer;
+use ssdp::Server as SsdpServer;
 
-#[derive(Parser)]
-#[command(version, about = "A zero-copy remote media streaming proxy")]
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
 struct Cli {
-    /// Remote source (e.g. qsc:DLNA/ or gdrive:folder_id)
+    /// Remote address/host
     remote: String,
 
-    /// Target listen address (e.g. 192.168.1.100:7879)
+    /// Target socket address (e.g., 192.168.1.81:7879)
     target: SocketAddr,
 }
 
@@ -24,33 +29,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Remote : {remote}");
     println!("Target : {target}");
 
-    // Extract host IP and port from the target SocketAddr
     let host = target.ip().to_string();
     let port = target.port();
 
-    // Instantiate both SSDP and DLNA servers sharing the same UUID
-    let ssdp_server = ssdp::Server::new(host, port);
-    let dlna_server = dlna::Server::new(*target, ssdp_server.uuid());
+    let ssdp_server = Arc::new(SsdpServer::new(&host, port));
+    let dlna_server = DlnaServer::new(&ssdp_server.uuid());
 
-    // 1. Advertise SSDP presence on launch
-    ssdp_server.advertise().await?;
+    // 1. Spawn Axum HTTP Server Task
+    let target_addr = *target;
+    tokio::spawn(async move {
+        if let Err(e) = dlna_server.run(target_addr).await {
+            eprintln!("[ERROR] DLNA HTTP Server failed: {e}");
+        }
+    });
 
-    // 2. Run both SSDP and DLNA listening loops concurrently alongside Ctrl+C
-    tokio::select! {
-        res = ssdp_server.listen() => {
-            if let Err(e) = res {
-                eprintln!("[ERROR] SSDP Server error: {e}");
-            }
-        }
-        res = dlna_server.listen() => {
-            if let Err(e) = res {
-                eprintln!("[ERROR] DLNA Server error: {e}");
-            }
-        }
-        _ = tokio::signal::ctrl_c() => {
-            println!("\n[INFO] Received Ctrl+C, shutting down gracefully...");
-        }
-    }
+    // 2. Broadcast SSDP Announcement
+    ssdp_server.advertise()?;
 
+    // 3. Spawn SSDP Listener Thread
+    let ssdp_clone = Arc::clone(&ssdp_server);
+    let shutdown_signal = ssdp_server.shutdown_handle();
+
+    let ssdp_handle = tokio::task::spawn_blocking(move || {
+        if let Err(e) = ssdp_clone.listen() {
+            eprintln!("[ERROR] SSDP server error: {e}");
+        }
+    });
+
+    // 4. Handle Graceful Exit
+    tokio::signal::ctrl_c().await?;
+    println!("\nReceived Ctrl+C, shutting down...");
+
+    shutdown_signal.store(false, Ordering::SeqCst);
+    let _ = ssdp_handle.await;
+
+    println!("Shutdown complete.");
     Ok(())
 }
