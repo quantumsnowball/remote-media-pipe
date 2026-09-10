@@ -39,7 +39,11 @@ impl DlnaServer {
         }
     }
 
-    pub async fn run(&self, addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn run(
+        &self,
+        addr: SocketAddr
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        // define all the routes
         let app = Router::new()
             .route("/rootDesc.xml", get(handle_root_desc))
             .route("/ContentDirectory.xml", get(handle_content_directory))
@@ -49,14 +53,17 @@ impl DlnaServer {
             .route("/stream/{*path}", get(handle_stream))
             .with_state(self.state.clone());
 
+        // bind addr
         let listener = TcpListener::bind(addr).await?;
         println!("[INFO] Axum DLNA HTTP Server running on http://{}", addr);
 
+        // serve
         axum::serve(
             listener,
             app.into_make_service_with_connect_info::<SocketAddr>(),
         ).await?;
 
+        //
         Ok(())
     }
 }

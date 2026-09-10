@@ -1,4 +1,4 @@
-use std::net::Ipv4Addr ;
+use std::net::{IpAddr, Ipv4Addr} ;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use uuid::Uuid;
@@ -16,7 +16,10 @@ pub struct SsdpServer {
 }
 
 impl SsdpServer {
-    pub fn new(host: &str, port: u16) -> Self {
+    pub fn new(
+        host: &IpAddr,
+        port: u16
+    ) -> Self {
         Self {
             location: format!("http://{}:{}/{}", host, port, DOCUMENT),
             uuid: Uuid::new_v4(),

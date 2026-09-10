@@ -10,7 +10,7 @@ use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, SeekFrom};
 use tokio_util::io::ReaderStream;
 
-/// Local filesystem provider implementing `MediaSource`
+/// local filesystem provider implementing `MediaSource`
 pub struct LocalSource {
     root_path: PathBuf,
 }
@@ -22,7 +22,7 @@ impl LocalSource {
         }
     }
 
-    /// Resolves and prevents directory traversal outside `root_path`
+    /// resolves and prevents directory traversal outside `root_path`
     fn resolve_path(&self, req_path: &str) -> PathBuf {
         let clean = req_path.trim_start_matches('/');
         if clean.is_empty() {
@@ -32,7 +32,7 @@ impl LocalSource {
         }
     }
 
-    /// Parses HTTP Range headers e.g., "bytes=100-200" or "bytes=500-"
+    /// parses HTTP Range headers e.g., "bytes=100-200" or "bytes=500-"
     fn parse_range(range_header: &str, file_size: u64) -> Option<(u64, u64)> {
         let range_str = range_header.strip_prefix("bytes=")?;
         let mut parts = range_str.split('-');
@@ -95,7 +95,7 @@ impl MediaSource for LocalSource {
         let metadata = file.metadata().await?;
         let file_size = metadata.len();
 
-        // 1. Partial Content (HTTP 206) - Range request for seeking
+        // partial Content (HTTP 206) - range request for seeking
         if let Some(range_raw) = range_header {
             if let Some((start, end)) = Self::parse_range(range_raw, file_size) {
                 let chunk_length = end - start + 1;
@@ -120,7 +120,7 @@ impl MediaSource for LocalSource {
             }
         }
 
-        // 2. Full Content (HTTP 200) - Initial request without Range
+        // full Content (HTTP 200) - initial request without Range
         let stream = ReaderStream::new(file);
         let response = (
             StatusCode::OK,
