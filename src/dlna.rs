@@ -1,13 +1,17 @@
 use axum::{
     Router,
-    extract::State,
-    http::header,
+    extract::{Query, State},
+    http::{header, StatusCode},
+    http::Request,
+    body::Body,
     response::IntoResponse,
     routing::{get, post},
 };
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
+use serde::Deserialize;
+use tower_http::services::ServeFile;
 
 // Compile-time static assets
 const XML_ROOT_DESC: &str = include_str!("../assets/rootDesc.xml");
@@ -48,6 +52,7 @@ impl DlnaServer {
             .route("/ConnectionManager.xml", get(handle_connection_manager))
             .route("/ctl/ContentDirectory", post(handle_ctl_content_directory))
             .route("/ctl/ConnectionManager", post(handle_ctl_connection_manager))
+            .route("/stream", get(handle_stream))
             .with_state(self.state.clone());
 
         let listener = TcpListener::bind(addr).await?;
@@ -158,4 +163,21 @@ async fn handle_ctl_content_directory(State(state): State<Arc<DlnaState>>, body:
         response_xml,
     )
         .into_response()
+}
+
+#[derive(Deserialize)]
+pub struct StreamQuery {
+    pub path: String,
+}
+
+pub async fn handle_stream(
+    Query(query): Query<StreamQuery>,
+    req: Request<Body>,
+) -> impl IntoResponse {
+    // serve the query path directly using tower-http
+    println!("Serving file {}", &query.path);
+    match ServeFile::new(&query.path).try_call(req).await {
+        Ok(response) => response.into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Failed to stream file").into_response(),
+    }
 }
