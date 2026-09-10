@@ -109,10 +109,17 @@ async fn handle_ctl_content_directory(State(state): State<Arc<DlnaState>>, body:
     }
 
     let didl_entries = if body.contains("<ObjectID>0") {
-        format!("{}{}",
-            format!(include_str!("../assets/didl_container.xml"), "dummy_dir", "dummy dir"),
-            format!(include_str!("../assets/didl_item.xml"), "dummy_item", "dummy item.mp4")
-        )
+        let mut entries = String::new();
+        if let Ok(mut read_dir) = tokio::fs::read_dir(&state.remote).await {
+            while let Ok(Some(entry)) = read_dir.next_entry().await {
+                if entry.file_type().await.map(|t| t.is_dir()).unwrap_or(false) {
+                    let name = entry.file_name().to_string_lossy().replace('&', ".");
+                    let path = entry.path().to_string_lossy().to_string();
+                    entries.push_str(&format!( include_str!("../assets/didl_container.xml"), path, name));
+                }
+            }
+        }
+        entries
     } else {
         String::new()
     };
