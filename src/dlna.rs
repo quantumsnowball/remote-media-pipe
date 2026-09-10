@@ -23,6 +23,7 @@ const SOAP_BROWSE_WRAPPER: &str = include_str!("../assets/soap_browse_wrapper.xm
 pub struct DlnaState {
     pub uuid: String,
     pub remote: String,
+    pub host: String,
 }
 
 pub struct DlnaServer {
@@ -30,11 +31,12 @@ pub struct DlnaServer {
 }
 
 impl DlnaServer {
-    pub fn new(uuid: &str, remote: &str) -> Self {
+    pub fn new(uuid: &str, remote: &str, target: &SocketAddr) -> Self {
         Self {
             state: Arc::new(DlnaState {
                 uuid: uuid.to_string(),
                 remote: remote.to_string(),
+                host: format!("{}:{}", target.ip(), target.port())
             }),
         }
     }
@@ -134,9 +136,12 @@ async fn handle_ctl_content_directory(State(state): State<Arc<DlnaState>>, body:
             let name = entry.file_name().to_string_lossy().replace('&', ".");
             let path = entry.path().to_string_lossy().to_string();
             if file_type.is_dir() {
+                // inject directory template
                 didl_entries.push_str(&format!(include_str!("../assets/didl_container.xml"), path, name));
             } else if file_type.is_file() {
-                didl_entries.push_str(&format!(include_str!("../assets/didl_item.xml"), path, name));
+                // inject video file template
+                let stream_url = format!("http://{}/stream?path={}", state.host, urlencoding::encode(&path));
+                didl_entries.push_str(&format!(include_str!("../assets/didl_item.xml"), path, name, stream_url));
             }
         }
     }

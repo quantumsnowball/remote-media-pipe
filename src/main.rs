@@ -26,14 +26,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let remote = &args.remote;
     let target = &args.target;
 
-    println!("Remote : {remote}");
-    println!("Target : {target}");
-
     let host = target.ip().to_string();
     let port = target.port();
 
     let ssdp_server = Arc::new(SsdpServer::new(&host, port));
-    let dlna_server = DlnaServer::new(&ssdp_server.uuid(), remote);
+    let dlna_server = DlnaServer::new(&ssdp_server.uuid(), remote, target);
 
     // 1. Spawn Axum HTTP Server Task
     let target_addr = *target;
