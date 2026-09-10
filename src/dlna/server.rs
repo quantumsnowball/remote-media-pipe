@@ -1,3 +1,9 @@
+use super::connection_manager::{handle_connection_manager, handle_ctl_connection_manager};
+use super::content_directory::{handle_content_directory, handle_ctl_content_directory};
+use super::root::handle_root_desc;
+use super::stream::handle_stream;
+use crate::provider::MediaSource;
+use crate::provider::local::LocalSource;
 use axum::{
     Router,
     routing::{get, post},
@@ -5,12 +11,6 @@ use axum::{
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use super::root::handle_root_desc;
-use super::connection_manager::{handle_connection_manager, handle_ctl_connection_manager};
-use super::content_directory::{handle_content_directory, handle_ctl_content_directory};
-use super::stream::handle_stream;
-use crate::provider::MediaSource;
-use crate::provider::local::LocalSource;
 
 #[derive(Clone)]
 pub struct DlnaState {
@@ -25,23 +25,23 @@ pub struct DlnaServer {
 
 impl DlnaServer {
     pub fn new(
-        uuid: &str,
+        uuid: &str, //
         remote: &str,
-        target: &SocketAddr
+        target: &SocketAddr,
     ) -> Self {
         Self {
             state: Arc::new(DlnaState {
                 uuid: uuid.to_string(),
                 // TODO: based on the remote str, determine what impl source to use
                 source: Arc::new(LocalSource::new(remote)),
-                host: format!("{}:{}", target.ip(), target.port())
+                host: format!("{}:{}", target.ip(), target.port()),
             }),
         }
     }
 
     pub async fn run(
-        &self,
-        addr: SocketAddr
+        &self, //
+        addr: SocketAddr,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // define all the routes
         let app = Router::new()
@@ -59,9 +59,10 @@ impl DlnaServer {
 
         // serve
         axum::serve(
-            listener,
+            listener, //
             app.into_make_service_with_connect_info::<SocketAddr>(),
-        ).await?;
+        )
+        .await?;
 
         //
         Ok(())

@@ -16,14 +16,13 @@ pub struct MediaEntry {
 
 #[async_trait]
 pub trait MediaSource: Send + Sync {
-
     async fn read_dir(
-        &self,
-        path: &str
+        &self, //
+        path: &str,
     ) -> io::Result<Vec<MediaEntry>>;
 
     async fn stream_file(
-        &self,
+        &self, //
         path: &str,
         range_header: Option<&str>,
     ) -> io::Result<Response<Body>>;

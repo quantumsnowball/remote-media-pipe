@@ -1,8 +1,8 @@
+use super::server::{MEDIA_TYPE, SERVER_TYPE, SSDP_IP, SSDP_PORT};
+use super::SsdpServer;
 use socket2::{Domain, Protocol, Socket, Type};
 use std::io;
 use std::net::{SocketAddr, SocketAddrV4, UdpSocket};
-use super::SsdpServer;
-use super::server::{SSDP_IP, SSDP_PORT, MEDIA_TYPE, SERVER_TYPE};
 
 impl SsdpServer {
     /// Auto advertise itself (referencing rclone)

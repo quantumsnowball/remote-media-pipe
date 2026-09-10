@@ -1,10 +1,6 @@
-use axum::{
-    extract::State,
-    http::header,
-    response::IntoResponse,
-};
-use std::sync::Arc;
 use super::server::DlnaState;
+use axum::{extract::State, http::header, response::IntoResponse};
+use std::sync::Arc;
 
 const XML_CD_SCPD: &str = include_str!("../../assets/ContentDirectory.xml");
 const XML_CD_SYSTEM_UPDATE: &str = include_str!("../../assets/cd_system_update.xml");
@@ -14,13 +10,13 @@ pub async fn handle_content_directory() -> impl IntoResponse {
     println!("[INFO] handle_content_directory");
 
     (
-        [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
+        [(header::CONTENT_TYPE, "text/xml; charset=utf-8")], //
         XML_CD_SCPD,
     )
 }
 
 pub async fn handle_ctl_content_directory(
-    State(state): State<Arc<DlnaState>>,
+    State(state): State<Arc<DlnaState>>, //
     body: String,
 ) -> impl IntoResponse {
     println!("[INFO] handle_ctl_content_directory");
@@ -42,7 +38,8 @@ pub async fn handle_ctl_content_directory(
             let end = rest.find('<').or_else(|| rest.find("&lt;"))?;
             let id = rest[..end].trim();
             (!id.is_empty()).then(|| id.to_string())
-        }).unwrap_or_else(|| "0".to_string());
+        })
+        .unwrap_or_else(|| "0".to_string());
 
     // init the target_dir from object_id
     let target_dir = if object_id == "0" { "" } else { &object_id };
@@ -56,15 +53,15 @@ pub async fn handle_ctl_content_directory(
             if entry.is_dir {
                 // inject directory template
                 didl_entries.push_str(&format!(
-                        include_str!("../../assets/didl_container.xml"),
-                        entry.path, safe_name
+                    include_str!("../../assets/didl_container.xml"),
+                    entry.path, safe_name
                 ));
             } else {
                 // inject video file template
                 let stream_url = format!("http://{}/stream{}", state.host, entry.path);
                 didl_entries.push_str(&format!(
-                        include_str!("../../assets/didl_item.xml"),
-                        entry.path, safe_name, entry.size, stream_url
+                    include_str!("../../assets/didl_item.xml"),
+                    entry.path, safe_name, entry.size, stream_url
                 ));
             }
         }
@@ -78,7 +75,7 @@ pub async fn handle_ctl_content_directory(
 
     // reply
     (
-        [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
+        [(header::CONTENT_TYPE, "text/xml; charset=utf-8")], //
         response_xml,
     )
         .into_response()

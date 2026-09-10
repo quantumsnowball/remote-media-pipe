@@ -1,10 +1,10 @@
+use super::server::{MEDIA_TYPE, SERVER_TYPE, SSDP_IP, SSDP_PORT};
+use super::SsdpServer;
 use socket2::{Domain, Protocol, Socket, Type};
 use std::io;
 use std::net::{Ipv4Addr, SocketAddrV4, UdpSocket};
 use std::sync::atomic::Ordering;
 use std::time::Duration;
-use super::SsdpServer;
-use super::server::{SSDP_IP, SSDP_PORT, MEDIA_TYPE, SERVER_TYPE};
 
 impl SsdpServer {
     /// Listen for discovery SSDP queries and respond to them
@@ -25,10 +25,7 @@ impl SsdpServer {
         sock.set_read_timeout(Some(Duration::from_millis(500)))?;
 
         let std_sock: UdpSocket = sock.into();
-        println!(
-            "[INFO] Listening for SSDP M-SEARCH requests on port {}...",
-            SSDP_PORT
-        );
+        println!("[INFO] Listening for SSDP M-SEARCH requests on port {}...", SSDP_PORT);
 
         let mut buf = [0u8; 1024];
 
@@ -56,16 +53,13 @@ impl SsdpServer {
                         }
                     }
                 }
-                Err(ref e)
-                    if e.kind() == io::ErrorKind::WouldBlock
-                        || e.kind() == io::ErrorKind::TimedOut =>
-                    {
-                        continue;
-                    }
+                Err(ref e) if e.kind() == io::ErrorKind::WouldBlock || e.kind() == io::ErrorKind::TimedOut => {
+                    continue;
+                }
                 Err(e) => {
                     eprintln!("[ERROR] SSDP socket error: {}", e);
                     return Err(e);
-                    }
+                }
             }
         }
 

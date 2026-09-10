@@ -2,7 +2,7 @@ use super::{MediaEntry, MediaSource};
 use async_trait::async_trait;
 use axum::{
     body::Body,
-    http::{header, StatusCode},
+    http::{StatusCode, header},
     response::{IntoResponse, Response},
 };
 use std::{io, path::PathBuf};
@@ -53,8 +53,8 @@ impl LocalSource {
 #[async_trait]
 impl MediaSource for LocalSource {
     async fn read_dir(
-        &self,
-        relative_path: &str
+        &self, //
+        relative_path: &str,
     ) -> io::Result<Vec<MediaEntry>> {
         let target_path = self.resolve_path(relative_path);
         let mut read_dir = tokio::fs::read_dir(&target_path).await?;
@@ -86,7 +86,7 @@ impl MediaSource for LocalSource {
     }
 
     async fn stream_file(
-        &self,
+        &self, //
         path: &str,
         range_header: Option<&str>,
     ) -> io::Result<Response<Body>> {
@@ -107,10 +107,10 @@ impl MediaSource for LocalSource {
                 let response = (
                     StatusCode::PARTIAL_CONTENT,
                     [
-                    (header::CONTENT_TYPE, "video/mp4"),
-                    (header::ACCEPT_RANGES, "bytes"),
-                    (header::CONTENT_RANGE, &format!("bytes {}-{}/{}", start, end, file_size),),
-                    (header::CONTENT_LENGTH, &chunk_length.to_string()),
+                        (header::CONTENT_TYPE, "video/mp4"),
+                        (header::ACCEPT_RANGES, "bytes"),
+                        (header::CONTENT_RANGE, &format!("bytes {}-{}/{}", start, end, file_size)),
+                        (header::CONTENT_LENGTH, &chunk_length.to_string()),
                     ],
                     Body::from_stream(stream),
                 )
@@ -125,9 +125,9 @@ impl MediaSource for LocalSource {
         let response = (
             StatusCode::OK,
             [
-            (header::CONTENT_TYPE, "video/mp4"),
-            (header::ACCEPT_RANGES, "bytes"),
-            (header::CONTENT_LENGTH, &file_size.to_string()),
+                (header::CONTENT_TYPE, "video/mp4"),
+                (header::ACCEPT_RANGES, "bytes"),
+                (header::CONTENT_LENGTH, &file_size.to_string()),
             ],
             Body::from_stream(stream),
         )
