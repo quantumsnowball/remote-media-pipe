@@ -64,7 +64,7 @@ pub async fn handle_ctl_content_directory(
                 let stream_url = format!("http://{}/stream{}", state.host, entry.path);
                 didl_entries.push_str(&format!(
                         include_str!("../../assets/didl_item.xml"),
-                        entry.path, safe_name, stream_url
+                        entry.path, safe_name, entry.size, stream_url
                 ));
             }
         }
