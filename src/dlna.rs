@@ -16,10 +16,6 @@ const XML_CM_SCPD: &str = include_str!("../assets/ConnectionManager.xml");
 const XML_CM_SOAP_RESP: &str = include_str!("../assets/cm_soap_response.xml");
 const XML_CD_SYSTEM_UPDATE: &str = include_str!("../assets/cd_system_update.xml");
 
-const DIDL_ROOT: &str = include_str!("../assets/didl_root.xml");
-const DIDL_MOVIES: &str = include_str!("../assets/didl_movies.xml");
-const DIDL_MUSIC: &str = include_str!("../assets/didl_music.xml");
-
 const SOAP_BROWSE_WRAPPER: &str = include_str!("../assets/soap_browse_wrapper.xml");
 
 
@@ -110,15 +106,18 @@ async fn handle_ctl_content_directory(body: String) -> impl IntoResponse {
             .into_response();
     }
 
-    let didl_content = if body.contains("ObjectID>1") || body.contains("ObjectID&gt;1") {
-        DIDL_MOVIES
-    } else if body.contains("ObjectID>2") || body.contains("ObjectID&gt;2") {
-        DIDL_MUSIC
+    let didl_entries = if body.contains("<ObjectID>0") {
+        format!("{}{}",
+            format!(include_str!("../assets/didl_container.xml"), "dummy_dir", "dummy dir"),
+            format!(include_str!("../assets/didl_item.xml"), "dummy_item", "dummy item.mp4")
+        )
     } else {
-        DIDL_ROOT
+        String::new()
     };
 
-    let response_xml = SOAP_BROWSE_WRAPPER.replace("{}", didl_content);
+    let didl_content = format!(include_str!("../assets/didl_content.xml"), didl_entries);
+
+    let response_xml = SOAP_BROWSE_WRAPPER.replace("{}", &didl_content);
 
     (
         [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],

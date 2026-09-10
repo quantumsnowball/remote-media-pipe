@@ -1,0 +1,4 @@
+<container id="{}" parentID="0" restricted="1" searchable="0" childCount="2">
+    <dc:title>{}</dc:title>
+    <upnp:class>object.container.storageFolder</upnp:class>
+</container>
