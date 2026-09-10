@@ -108,28 +108,40 @@ async fn handle_ctl_content_directory(State(state): State<Arc<DlnaState>>, body:
             .into_response();
     }
 
-    let didl_entries = if body.contains("<ObjectID>0") {
-        let mut entries = String::new();
-        if let Ok(mut read_dir) = tokio::fs::read_dir(&state.remote).await {
-            while let Ok(Some(entry)) = read_dir.next_entry().await {
-                let file_type = match entry.file_type().await {
-                    Ok(ft) => ft,
-                    Err(_) => continue,
-                };
-
-                let name = entry.file_name().to_string_lossy().replace('&', ".");
-                let path = entry.path().to_string_lossy().to_string();
-                if file_type.is_dir() {
-                    entries.push_str(&format!(include_str!("../assets/didl_container.xml"), path, name));
-                } else if file_type.is_file() {
-                    entries.push_str(&format!(include_str!("../assets/didl_item.xml"), path, name));
+    fn extract_object_id(xml: &str) -> Option<String> {
+        let patterns = ["<ObjectID>", "&lt;ObjectID&gt;"];
+        for pattern in patterns {
+            if let Some(start) = xml.find(pattern) {
+                let rest = &xml[start + pattern.len()..];
+                if let Some(end) = rest.find('<').or_else(|| rest.find("&lt;")) {
+                    let id = rest[..end].trim();
+                    if !id.is_empty() {
+                        return Some(id.to_string());
+                    }
                 }
             }
         }
-        entries
-    } else {
-        String::new()
-    };
+        None
+    }
+    let object_id = extract_object_id(&body).unwrap_or_else(|| "0".to_string());
+    let target_dir = if object_id == "0" {std::path::PathBuf::from(&state.remote)} else {std::path::PathBuf::from(&object_id)};
+    let mut didl_entries = String::new();
+    if let Ok(mut read_dir) = tokio::fs::read_dir(&target_dir).await {
+        while let Ok(Some(entry)) = read_dir.next_entry().await {
+            let file_type = match entry.file_type().await {
+                Ok(ft) => ft,
+                Err(_) => continue,
+            };
+
+            let name = entry.file_name().to_string_lossy().replace('&', ".");
+            let path = entry.path().to_string_lossy().to_string();
+            if file_type.is_dir() {
+                didl_entries.push_str(&format!(include_str!("../assets/didl_container.xml"), path, name));
+            } else if file_type.is_file() {
+                didl_entries.push_str(&format!(include_str!("../assets/didl_item.xml"), path, name));
+            }
+        }
+    }
 
     let didl_content = format!(include_str!("../assets/didl_content.xml"), didl_entries);
 
