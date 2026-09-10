@@ -10,7 +10,6 @@ use axum::{
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use serde::Deserialize;
 use tower_http::services::ServeFile;
 
 // Compile-time static assets
