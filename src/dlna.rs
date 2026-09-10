@@ -108,22 +108,17 @@ async fn handle_ctl_content_directory(State(state): State<Arc<DlnaState>>, body:
             .into_response();
     }
 
-    fn extract_object_id(xml: &str) -> Option<String> {
-        let patterns = ["<ObjectID>", "&lt;ObjectID&gt;"];
-        for pattern in patterns {
-            if let Some(start) = xml.find(pattern) {
-                let rest = &xml[start + pattern.len()..];
-                if let Some(end) = rest.find('<').or_else(|| rest.find("&lt;")) {
-                    let id = rest[..end].trim();
-                    if !id.is_empty() {
-                        return Some(id.to_string());
-                    }
-                }
-            }
-        }
-        None
-    }
-    let object_id = extract_object_id(&body).unwrap_or_else(|| "0".to_string());
+    // user click on a directory, the object_id should be the directory path
+    let object_id = ["<ObjectID>", "&lt;ObjectID&gt;"]
+        .iter()
+        .find_map(|&pattern| {
+            let rest = &body[body.find(pattern)? + pattern.len()..];
+            let end = rest.find('<').or_else(|| rest.find("&lt;"))?;
+            let id = rest[..end].trim();
+            (!id.is_empty()).then(|| id.to_string())
+        }).unwrap_or_else(|| "0".to_string());
+
+    //
     let target_dir = if object_id == "0" {std::path::PathBuf::from(&state.remote)} else {std::path::PathBuf::from(&object_id)};
     let mut didl_entries = String::new();
     if let Ok(mut read_dir) = tokio::fs::read_dir(&target_dir).await {
