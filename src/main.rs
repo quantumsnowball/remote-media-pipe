@@ -7,33 +7,64 @@ use ssdp::SsdpServer;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
+use clap::{Subcommand};
+use std::path::PathBuf;
+use provider::MediaSource;
+use provider::local::LocalSource;
 
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Cli {
-    /// remote string completely describe a resource
-    remote: String,
-    /// target socket address (e.g., 192.168.1.81:7879)
-    target: SocketAddr,
+#[command(name = "remote-media-pipe")]
+#[command(about = "A non-root remote media streaming pipe")]
+pub struct Cli {
+    #[command(subcommand)]
+    pub provider: ProviderSubcommand,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ProviderSubcommand {
+    /// Local directory path (e.g. ~/Movies or /data/video)
+    Local {
+        source: PathBuf,
+        target: SocketAddr,
+    },
+    /// Remote target (e.g. s7:~/Movies or s7:/var/media)
+    Sftp {
+        source: String,
+        target: SocketAddr,
+    },
+    /// Remote folder path or ID (e.g. qsc:DLNA/)
+    Gdrive {
+        source: String,
+        target: SocketAddr,
+    },
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // parse args
-    let args = Cli::parse();
-    let remote = &args.remote;
-    let target = &args.target;
-    let host = target.ip();
-    let port = target.port();
+    let cli = Cli::parse();
+    let (source, target): (Arc<dyn MediaSource>, SocketAddr) = match cli.provider {
+        ProviderSubcommand::Local { source, target } => {
+            (Arc::new(LocalSource::new(source)), target)
+        }
+        ProviderSubcommand::Sftp { source, target } => {
+            println!("[INFO] args: {}, {}", source, target);
+            todo!("Implement sftp");
+        }
+        ProviderSubcommand::Gdrive { source, target } => {
+            println!("[INFO] args: {}, {}", source, target);
+            todo!("Implement gdrive");
+        }
+    };
+    println!("[INFO] Starting server bound to {}", target);
 
     // create servers
-    let ssdp_server = Arc::new(SsdpServer::new(&host, port));
-    let dlna_server = DlnaServer::new(&ssdp_server.uuid(), remote, target);
+    let ssdp_server = Arc::new(SsdpServer::new(&target.ip(), target.port()));
+    let dlna_server = DlnaServer::new(&ssdp_server.uuid(), source, &target);
 
     // spawn Axum HTTP server task
-    let target_addr = *target;
     tokio::spawn(async move {
-        if let Err(e) = dlna_server.run(target_addr).await {
+        if let Err(e) = dlna_server.run(target).await {
             eprintln!("[ERROR] DLNA HTTP Server failed: {e}");
         }
     });
