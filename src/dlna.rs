@@ -1,6 +1,6 @@
 use axum::{
     Router,
-    extract::{Query, State},
+    extract::{State, Path},
     http::{header, StatusCode},
     http::Request,
     body::Body,
@@ -165,19 +165,17 @@ async fn handle_ctl_content_directory(State(state): State<Arc<DlnaState>>, body:
         .into_response()
 }
 
-#[derive(Deserialize)]
-pub struct StreamQuery {
-    pub path: String,
-}
-
 pub async fn handle_stream(
-    Query(query): Query<StreamQuery>,
+    Path(path): Path<String>,
     req: Request<Body>,
 ) -> impl IntoResponse {
-    // serve the query path directly using tower-http
-    println!("Serving file {}", &query.path);
-    match ServeFile::new(&query.path).try_call(req).await {
+    // Axum strips the leading slash from wildcard matches, so re-add it
+    let full_path = format!("/{}", path);
+    println!("[INFO] Serving file: {}", full_path);
+
+    match ServeFile::new(&full_path).try_call(req).await {
         Ok(response) => response.into_response(),
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Failed to stream file").into_response(),
     }
 }
+
