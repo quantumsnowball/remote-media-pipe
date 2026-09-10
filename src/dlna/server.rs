@@ -13,13 +13,13 @@ use tokio::net::TcpListener;
 use tower_http::services::ServeFile;
 
 // Compile-time static assets
-const XML_ROOT_DESC: &str = include_str!("../assets/rootDesc.xml");
-const XML_CD_SCPD: &str = include_str!("../assets/ConnectionManager.xml");
-const XML_CM_SCPD: &str = include_str!("../assets/ConnectionManager.xml");
-const XML_CM_SOAP_RESP: &str = include_str!("../assets/cm_soap_response.xml");
-const XML_CD_SYSTEM_UPDATE: &str = include_str!("../assets/cd_system_update.xml");
+const XML_ROOT_DESC: &str = include_str!("../../assets/rootDesc.xml");
+const XML_CD_SCPD: &str = include_str!("../../assets/ConnectionManager.xml");
+const XML_CM_SCPD: &str = include_str!("../../assets/ConnectionManager.xml");
+const XML_CM_SOAP_RESP: &str = include_str!("../../assets/cm_soap_response.xml");
+const XML_CD_SYSTEM_UPDATE: &str = include_str!("../../assets/cd_system_update.xml");
 
-const SOAP_BROWSE_WRAPPER: &str = include_str!("../assets/soap_browse_wrapper.xml");
+const SOAP_BROWSE_WRAPPER: &str = include_str!("../../assets/soap_browse_wrapper.xml");
 
 
 #[derive(Clone)]
@@ -141,17 +141,17 @@ async fn handle_ctl_content_directory(State(state): State<Arc<DlnaState>>, body:
             let path = entry.path().to_string_lossy().to_string();
             if file_type.is_dir() {
                 // inject directory template
-                didl_entries.push_str(&format!(include_str!("../assets/didl_container.xml"), path, name));
+                didl_entries.push_str(&format!(include_str!("../../assets/didl_container.xml"), path, name));
             } else if file_type.is_file() {
                 // inject video file template
                 let stream_url = format!("http://{}/stream{}", state.host, path);
-                didl_entries.push_str(&format!(include_str!("../assets/didl_item.xml"), path, name, stream_url));
+                didl_entries.push_str(&format!(include_str!("../../assets/didl_item.xml"), path, name, stream_url));
             }
         }
     }
 
     // wrap didl_entries to didl_content
-    let didl_content = format!(include_str!("../assets/didl_content.xml"), didl_entries);
+    let didl_content = format!(include_str!("../../assets/didl_content.xml"), didl_entries);
 
     // wrap the didl_content with the soap browser wrapper
     let response_xml = SOAP_BROWSE_WRAPPER.replace("{}", &didl_content);
