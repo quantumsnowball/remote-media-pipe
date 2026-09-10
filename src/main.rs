@@ -1,11 +1,9 @@
+mod dlna;
+mod ssdp;
 use clap::Parser;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
-
-mod dlna;
-mod ssdp;
-
 use dlna::DlnaServer;
 use ssdp::SsdpServer as SsdpServer;
 
