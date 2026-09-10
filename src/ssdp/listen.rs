@@ -3,10 +3,10 @@ use std::io;
 use std::net::{Ipv4Addr, SocketAddrV4, UdpSocket};
 use std::sync::atomic::Ordering;
 use std::time::Duration;
-use super::Server;
+use super::SsdpServer;
 use super::server::{SSDP_IP, SSDP_PORT, MEDIA_TYPE, SERVER_TYPE};
 
-impl Server {
+impl SsdpServer {
     /// Listen for discovery SSDP queries and respond to them
     pub fn listen(&self) -> io::Result<()> {
         let sock = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;

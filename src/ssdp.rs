@@ -2,4 +2,4 @@ mod server;
 mod advertise;
 mod listen;
 
-pub use server::Server;
+pub use server::SsdpServer;

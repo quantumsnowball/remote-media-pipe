@@ -7,7 +7,7 @@ mod dlna;
 mod ssdp;
 
 use dlna::DlnaServer;
-use ssdp::Server as SsdpServer;
+use ssdp::SsdpServer as SsdpServer;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]

@@ -1,10 +1,10 @@
 use socket2::{Domain, Protocol, Socket, Type};
 use std::io;
 use std::net::{SocketAddr, SocketAddrV4, UdpSocket};
-use super::Server;
+use super::SsdpServer;
 use super::server::{SSDP_IP, SSDP_PORT, MEDIA_TYPE, SERVER_TYPE};
 
-impl Server {
+impl SsdpServer {
     /// Auto advertise itself (referencing rclone)
     pub fn advertise(&self) -> io::Result<()> {
         let sock = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
