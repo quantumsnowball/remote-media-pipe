@@ -100,6 +100,7 @@ async fn handle_ctl_connection_manager() -> impl IntoResponse {
 async fn handle_ctl_content_directory(State(state): State<Arc<DlnaState>>, body: String) -> impl IntoResponse {
     println!("[INFO] handle_ctl_content_directory");
 
+    // end here if user doesn't not click on a directory
     if !body.contains("Browse") {
         return (
             [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
@@ -118,8 +119,10 @@ async fn handle_ctl_content_directory(State(state): State<Arc<DlnaState>>, body:
             (!id.is_empty()).then(|| id.to_string())
         }).unwrap_or_else(|| "0".to_string());
 
-    //
+    // determine the target_dir from object_id
     let target_dir = if object_id == "0" {std::path::PathBuf::from(&state.remote)} else {std::path::PathBuf::from(&object_id)};
+
+    // list the target_dir then generate the didl_entries
     let mut didl_entries = String::new();
     if let Ok(mut read_dir) = tokio::fs::read_dir(&target_dir).await {
         while let Ok(Some(entry)) = read_dir.next_entry().await {
@@ -138,10 +141,13 @@ async fn handle_ctl_content_directory(State(state): State<Arc<DlnaState>>, body:
         }
     }
 
+    // wrap didl_entries to didl_content
     let didl_content = format!(include_str!("../assets/didl_content.xml"), didl_entries);
 
+    // wrap the didl_content with the soap browser wrapper
     let response_xml = SOAP_BROWSE_WRAPPER.replace("{}", &didl_content);
 
+    // reply
     (
         [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
         response_xml,
