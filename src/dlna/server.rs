@@ -3,7 +3,6 @@ use super::content_directory::{handle_content_directory, handle_ctl_content_dire
 use super::root::handle_root_desc;
 use super::stream::handle_stream;
 use crate::provider::MediaSource;
-use crate::provider::local::LocalSource;
 use axum::{
     Router,
     routing::{get, post},
@@ -26,14 +25,13 @@ pub struct DlnaServer {
 impl DlnaServer {
     pub fn new(
         uuid: &str, //
-        remote: &str,
+        source: Arc<dyn MediaSource>,
         target: &SocketAddr,
     ) -> Self {
         Self {
             state: Arc::new(DlnaState {
                 uuid: uuid.to_string(),
-                // TODO: based on the remote str, determine what impl source to use
-                source: Arc::new(LocalSource::new(remote)),
+                source,
                 host: format!("{}:{}", target.ip(), target.port()),
             }),
         }
