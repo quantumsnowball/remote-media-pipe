@@ -19,7 +19,10 @@ pub async fn handle_content_directory() -> impl IntoResponse {
     )
 }
 
-pub async fn handle_ctl_content_directory(State(state): State<Arc<DlnaState>>, body: String) -> impl IntoResponse {
+pub async fn handle_ctl_content_directory(
+    State(state): State<Arc<DlnaState>>,
+    body: String,
+) -> impl IntoResponse {
     println!("[INFO] handle_ctl_content_directory");
 
     // end here if user doesn't not click on a directory
@@ -41,27 +44,28 @@ pub async fn handle_ctl_content_directory(State(state): State<Arc<DlnaState>>, b
             (!id.is_empty()).then(|| id.to_string())
         }).unwrap_or_else(|| "0".to_string());
 
-    // determine the target_dir from object_id
-    let target_dir = if object_id == "0" {std::path::PathBuf::from(&state.remote)} else {std::path::PathBuf::from(&object_id)};
+    // init the target_dir from object_id
+    let target_dir = if object_id == "0" { "" } else { &object_id };
 
     // list the target_dir then generate the didl_entries
     let mut didl_entries = String::new();
-    if let Ok(mut read_dir) = tokio::fs::read_dir(&target_dir).await {
-        while let Ok(Some(entry)) = read_dir.next_entry().await {
-            let file_type = match entry.file_type().await {
-                Ok(ft) => ft,
-                Err(_) => continue,
-            };
+    if let Ok(entries) = state.source.read_dir(&target_dir).await {
+        for entry in entries {
+            let safe_name = entry.name.replace('&', ".");
 
-            let name = entry.file_name().to_string_lossy().replace('&', ".");
-            let path = entry.path().to_string_lossy().to_string();
-            if file_type.is_dir() {
+            if entry.is_dir {
                 // inject directory template
-                didl_entries.push_str(&format!(include_str!("../../assets/didl_container.xml"), path, name));
-            } else if file_type.is_file() {
+                didl_entries.push_str(&format!(
+                        include_str!("../../assets/didl_container.xml"),
+                        entry.path, safe_name
+                ));
+            } else {
                 // inject video file template
-                let stream_url = format!("http://{}/stream{}", state.host, path);
-                didl_entries.push_str(&format!(include_str!("../../assets/didl_item.xml"), path, name, stream_url));
+                let stream_url = format!("http://{}/stream{}", state.host, entry.path);
+                didl_entries.push_str(&format!(
+                        include_str!("../../assets/didl_item.xml"),
+                        entry.path, safe_name, stream_url
+                ));
             }
         }
     }
