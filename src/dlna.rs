@@ -52,7 +52,7 @@ impl DlnaServer {
             .route("/ConnectionManager.xml", get(handle_connection_manager))
             .route("/ctl/ContentDirectory", post(handle_ctl_content_directory))
             .route("/ctl/ConnectionManager", post(handle_ctl_connection_manager))
-            .route("/stream", get(handle_stream))
+            .route("/stream/{*path}", get(handle_stream))
             .with_state(self.state.clone());
 
         let listener = TcpListener::bind(addr).await?;
