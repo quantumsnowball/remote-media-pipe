@@ -1,6 +1,6 @@
 use axum::{
     Router,
-    extract::{Query, State},
+    extract::{State, Path},
     http::{header, StatusCode},
     http::Request,
     body::Body,
@@ -10,7 +10,6 @@ use axum::{
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use serde::Deserialize;
 use tower_http::services::ServeFile;
 
 // Compile-time static assets
@@ -52,7 +51,7 @@ impl DlnaServer {
             .route("/ConnectionManager.xml", get(handle_connection_manager))
             .route("/ctl/ContentDirectory", post(handle_ctl_content_directory))
             .route("/ctl/ConnectionManager", post(handle_ctl_connection_manager))
-            .route("/stream", get(handle_stream))
+            .route("/stream/{*path}", get(handle_stream))
             .with_state(self.state.clone());
 
         let listener = TcpListener::bind(addr).await?;
@@ -145,7 +144,7 @@ async fn handle_ctl_content_directory(State(state): State<Arc<DlnaState>>, body:
                 didl_entries.push_str(&format!(include_str!("../assets/didl_container.xml"), path, name));
             } else if file_type.is_file() {
                 // inject video file template
-                let stream_url = format!("http://{}/stream?path={}", state.host, urlencoding::encode(&path));
+                let stream_url = format!("http://{}/stream{}", state.host, path);
                 didl_entries.push_str(&format!(include_str!("../assets/didl_item.xml"), path, name, stream_url));
             }
         }
@@ -165,19 +164,17 @@ async fn handle_ctl_content_directory(State(state): State<Arc<DlnaState>>, body:
         .into_response()
 }
 
-#[derive(Deserialize)]
-pub struct StreamQuery {
-    pub path: String,
-}
-
 pub async fn handle_stream(
-    Query(query): Query<StreamQuery>,
+    Path(path): Path<String>,
     req: Request<Body>,
 ) -> impl IntoResponse {
-    // serve the query path directly using tower-http
-    println!("Serving file {}", &query.path);
-    match ServeFile::new(&query.path).try_call(req).await {
+    // Axum strips the leading slash from wildcard matches, so re-add it
+    let full_path = format!("/{}", path);
+    println!("[INFO] Serving file: {}", full_path);
+
+    match ServeFile::new(&full_path).try_call(req).await {
         Ok(response) => response.into_response(),
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Failed to stream file").into_response(),
     }
 }
+
