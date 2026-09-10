@@ -1,13 +1,11 @@
+mod dlna;
+mod ssdp;
 use clap::Parser;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
-
-mod dlna;
-mod ssdp;
-
 use dlna::DlnaServer;
-use ssdp::Server as SsdpServer;
+use ssdp::SsdpServer as SsdpServer;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
