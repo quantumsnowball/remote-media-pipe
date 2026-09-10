@@ -23,4 +23,3 @@ pub async fn handle_ctl_connection_manager() -> impl IntoResponse {
         XML_CM_SOAP_RESP,
     )
 }
-

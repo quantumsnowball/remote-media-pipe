@@ -20,4 +20,3 @@ pub async fn handle_stream(
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Failed to stream file").into_response(),
     }
 }
-
