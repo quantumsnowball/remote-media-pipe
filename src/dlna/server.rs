@@ -12,13 +12,11 @@ use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::services::ServeFile;
 use super::root::handle_root_desc;
+use super::connection_manager::{handle_connection_manager, handle_ctl_connection_manager};
 
 // Compile-time static assets
 const XML_CD_SCPD: &str = include_str!("../../assets/ContentDirectory.xml");
-const XML_CM_SCPD: &str = include_str!("../../assets/ConnectionManager.xml");
-const XML_CM_SOAP_RESP: &str = include_str!("../../assets/cm_soap_response.xml");
 const XML_CD_SYSTEM_UPDATE: &str = include_str!("../../assets/cd_system_update.xml");
-
 const SOAP_BROWSE_WRAPPER: &str = include_str!("../../assets/soap_browse_wrapper.xml");
 
 
@@ -72,24 +70,6 @@ async fn handle_content_directory() -> impl IntoResponse {
     (
         [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
         XML_CD_SCPD,
-    )
-}
-
-async fn handle_connection_manager() -> impl IntoResponse {
-    println!("[INFO] handle_connection_manager");
-
-    (
-        [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
-        XML_CM_SCPD,
-    )
-}
-
-async fn handle_ctl_connection_manager() -> impl IntoResponse {
-    println!("[INFO] handle_ctl_connection_manager");
-
-    (
-        [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
-        XML_CM_SOAP_RESP,
     )
 }
 
