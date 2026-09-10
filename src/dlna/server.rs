@@ -9,10 +9,13 @@ use super::root::handle_root_desc;
 use super::connection_manager::{handle_connection_manager, handle_ctl_connection_manager};
 use super::content_directory::{handle_content_directory, handle_ctl_content_directory};
 use super::stream::handle_stream;
+use crate::provider::MediaSource;
+use crate::provider::local::LocalSource;
 
 #[derive(Clone)]
 pub struct DlnaState {
     pub uuid: String,
+    pub source: Arc<dyn MediaSource>,
     pub remote: String,
     pub host: String,
 }
@@ -22,10 +25,16 @@ pub struct DlnaServer {
 }
 
 impl DlnaServer {
-    pub fn new(uuid: &str, remote: &str, target: &SocketAddr) -> Self {
+    pub fn new(
+        uuid: &str,
+        remote: &str,
+        target: &SocketAddr
+    ) -> Self {
         Self {
             state: Arc::new(DlnaState {
                 uuid: uuid.to_string(),
+                // TODO: based on the remote str, determine what impl source to use
+                source: Arc::new(LocalSource::new(remote)),
                 remote: remote.to_string(),
                 host: format!("{}:{}", target.ip(), target.port())
             }),
