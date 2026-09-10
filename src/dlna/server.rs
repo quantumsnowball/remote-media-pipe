@@ -7,13 +7,14 @@ use axum::{
     Router,
     routing::{get, post},
 };
+use uuid::Uuid;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 
 #[derive(Clone)]
 pub struct DlnaState {
-    pub uuid: String,
+    pub uuid: Uuid,
     pub source: Arc<dyn MediaSource>,
     pub host: String,
 }
@@ -24,13 +25,13 @@ pub struct DlnaServer {
 
 impl DlnaServer {
     pub fn new(
-        uuid: &str, //
+        uuid: Uuid, //
         source: Arc<dyn MediaSource>,
         target: &SocketAddr,
     ) -> Self {
         Self {
             state: Arc::new(DlnaState {
-                uuid: uuid.to_string(),
+                uuid,
                 source,
                 host: format!("{}:{}", target.ip(), target.port()),
             }),

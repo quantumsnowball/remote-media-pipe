@@ -4,6 +4,7 @@ mod ssdp;
 use clap::Parser;
 use dlna::DlnaServer;
 use ssdp::SsdpServer;
+use uuid::Uuid;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
@@ -59,8 +60,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("[INFO] Starting server bound to {}", target);
 
     // create servers
-    let ssdp_server = Arc::new(SsdpServer::new(&target.ip(), target.port()));
-    let dlna_server = DlnaServer::new(&ssdp_server.uuid(), source, &target);
+    let uuid = Uuid::new_v4();
+    let ssdp_server = Arc::new(SsdpServer::new(uuid, &target.ip(), target.port()));
+    let dlna_server = DlnaServer::new(uuid, source, &target);
 
     // spawn Axum HTTP server task
     tokio::spawn(async move {

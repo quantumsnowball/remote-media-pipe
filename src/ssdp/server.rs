@@ -17,19 +17,15 @@ pub struct SsdpServer {
 
 impl SsdpServer {
     pub fn new(
-        host: &IpAddr, //
+        uuid: Uuid, //
+        host: &IpAddr,
         port: u16,
     ) -> Self {
         Self {
             location: format!("http://{}:{}/{}", host, port, DOCUMENT),
-            uuid: Uuid::new_v4(),
+            uuid,
             running: Arc::new(AtomicBool::new(true)),
         }
-    }
-
-    /// Expose UUID for DLNA HTTP Server initialization
-    pub fn uuid(&self) -> String {
-        self.uuid.to_string()
     }
 
     /// Returns a handle to signal shutdown

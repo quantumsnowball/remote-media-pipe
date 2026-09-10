@@ -11,7 +11,7 @@ pub async fn handle_root_desc(
 ) -> impl IntoResponse {
     println!("[INFO] handle_root_desc");
 
-    let xml = XML_ROOT_DESC.replace("{UUID}", &state.uuid);
+    let xml = XML_ROOT_DESC.replace("{UUID}", &state.uuid.to_string());
     (
         [(header::CONTENT_TYPE, "text/xml; charset=utf-8")], //
         xml,
