@@ -525,6 +525,7 @@ dependencies = [
  "log",
  "socket2",
  "tokio",
+ "tokio-util",
  "tower-http",
  "uuid",
 ]
