@@ -16,7 +16,6 @@ use crate::provider::local::LocalSource;
 pub struct DlnaState {
     pub uuid: String,
     pub source: Arc<dyn MediaSource>,
-    pub remote: String,
     pub host: String,
 }
 
@@ -35,7 +34,6 @@ impl DlnaServer {
                 uuid: uuid.to_string(),
                 // TODO: based on the remote str, determine what impl source to use
                 source: Arc::new(LocalSource::new(remote)),
-                remote: remote.to_string(),
                 host: format!("{}:{}", target.ip(), target.port())
             }),
         }
