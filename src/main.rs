@@ -1,5 +1,6 @@
-mod dlna;
 mod ssdp;
+mod dlna;
+mod provider;
 use clap::Parser;
 use std::net::SocketAddr;
 use std::sync::Arc;
