@@ -11,9 +11,9 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::services::ServeFile;
+use super::root::handle_root_desc;
 
 // Compile-time static assets
-const XML_ROOT_DESC: &str = include_str!("../../assets/rootDesc.xml");
 const XML_CD_SCPD: &str = include_str!("../../assets/ConnectionManager.xml");
 const XML_CM_SCPD: &str = include_str!("../../assets/ConnectionManager.xml");
 const XML_CM_SOAP_RESP: &str = include_str!("../../assets/cm_soap_response.xml");
@@ -64,16 +64,6 @@ impl DlnaServer {
 
         Ok(())
     }
-}
-
-async fn handle_root_desc(State(state): State<Arc<DlnaState>>) -> impl IntoResponse {
-    println!("[INFO] handle_root_desc");
-
-    let xml = XML_ROOT_DESC.replace("{UUID}", &state.uuid);
-    (
-        [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
-        xml
-    )
 }
 
 async fn handle_content_directory() -> impl IntoResponse {
