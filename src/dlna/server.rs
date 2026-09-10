@@ -14,7 +14,7 @@ use tower_http::services::ServeFile;
 use super::root::handle_root_desc;
 
 // Compile-time static assets
-const XML_CD_SCPD: &str = include_str!("../../assets/ConnectionManager.xml");
+const XML_CD_SCPD: &str = include_str!("../../assets/ContentDirectory.xml");
 const XML_CM_SCPD: &str = include_str!("../../assets/ConnectionManager.xml");
 const XML_CM_SOAP_RESP: &str = include_str!("../../assets/cm_soap_response.xml");
 const XML_CD_SYSTEM_UPDATE: &str = include_str!("../../assets/cd_system_update.xml");
