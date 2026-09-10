@@ -145,7 +145,7 @@ async fn handle_ctl_content_directory(State(state): State<Arc<DlnaState>>, body:
                 didl_entries.push_str(&format!(include_str!("../assets/didl_container.xml"), path, name));
             } else if file_type.is_file() {
                 // inject video file template
-                let stream_url = format!("http://{}/stream?path={}", state.host, urlencoding::encode(&path));
+                let stream_url = format!("http://{}/stream{}", state.host, path);
                 didl_entries.push_str(&format!(include_str!("../assets/didl_item.xml"), path, name, stream_url));
             }
         }
