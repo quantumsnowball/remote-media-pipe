@@ -22,6 +22,7 @@ const SOAP_BROWSE_WRAPPER: &str = include_str!("../assets/soap_browse_wrapper.xm
 #[derive(Clone)]
 pub struct DlnaState {
     pub uuid: String,
+    pub remote: String,
 }
 
 pub struct DlnaServer {
@@ -29,10 +30,11 @@ pub struct DlnaServer {
 }
 
 impl DlnaServer {
-    pub fn new(uuid: &str) -> Self {
+    pub fn new(uuid: &str, remote: &str) -> Self {
         Self {
             state: Arc::new(DlnaState {
                 uuid: uuid.to_string(),
+                remote: remote.to_string(),
             }),
         }
     }
