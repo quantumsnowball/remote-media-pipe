@@ -97,7 +97,7 @@ async fn handle_ctl_connection_manager() -> impl IntoResponse {
     )
 }
 
-async fn handle_ctl_content_directory(body: String) -> impl IntoResponse {
+async fn handle_ctl_content_directory(State(state): State<Arc<DlnaState>>, body: String) -> impl IntoResponse {
     println!("[INFO] handle_ctl_content_directory");
 
     if !body.contains("Browse") {
