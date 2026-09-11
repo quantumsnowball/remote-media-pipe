@@ -1,5 +1,6 @@
 use super::server::DlnaState;
 use axum::{extract::State, http::header, response::IntoResponse};
+use mime_guess::from_path;
 use std::sync::Arc;
 
 const XML_CD_SCPD: &str = include_str!("../../assets/ContentDirectory.xml");
@@ -65,10 +66,28 @@ pub async fn handle_ctl_content_directory(
                     .collect::<Vec<_>>()
                     .join("/");
                 let stream_url = format!("http://{}/stream/{}", state.host, encoded_path);
+                // guess mime type
+                let mime = from_path(&entry.path).first_or_octet_stream().to_string();
+                // derive upnp_class from top-level type
+                let upnp_class = if mime.contains("video") {
+                    "object.item.videoItem.movie"
+                } else if mime.contains("audio") {
+                    "object.item.audioItem.musicTrack"
+                } else if mime.contains("image") {
+                    "object.item.imageItem.photo"
+                } else {
+                    "object.item.textItem"
+                };
+                println!("{}, {}, {}", entry.path, mime, upnp_class);
                 // inject video file template
                 didl_entries.push_str(&format!(
                     include_str!("../../assets/didl_item.xml"),
-                    entry.path, safe_name, entry.size, stream_url
+                    entry.path, //
+                    safe_name,
+                    upnp_class,
+                    mime,
+                    entry.size,
+                    stream_url,
                 ));
             }
         }
