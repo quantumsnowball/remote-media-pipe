@@ -13,6 +13,7 @@ axum = "0.8.9"
 clap = { version = "4.6.6", features = ["derive"] }
 log = "0.4.34"
 russh = "0.63.3"
+russh-keys = "0.49.2"
 russh-sftp = "3.0.0"
 socket2 = "0.6.5"
 ssh2-config = "0.8.0"
