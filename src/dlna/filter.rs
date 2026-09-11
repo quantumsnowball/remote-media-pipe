@@ -8,17 +8,17 @@ use std::net::{IpAddr, SocketAddr};
 
 // ip whitelist middleware checking peer address against server bind target
 pub async fn enforce_ip_whitelist(
-    State(allowed_ip): State<IpAddr>,
+    State(whitelist): State<Vec<IpAddr>>,
     ConnectInfo(peer_addr): ConnectInfo<SocketAddr>,
     request: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
-    // allow only loopback traffic or exact target ip match, else gives a 403 forbidden
-    let client_ip = peer_addr.ip();
-    if client_ip == allowed_ip || client_ip.is_loopback() {
+    // allow loopback traffic or any whitelisted ip
+    let src_ip = peer_addr.ip();
+    if src_ip.is_loopback() || whitelist.contains(&src_ip) {
         Ok(next.run(request).await)
     } else {
-        println!("[WARN] blocked request from unauthorized ip: {}", client_ip);
+        println!("[WARN] blocked request from unauthorized ip: {}", src_ip);
         Err(StatusCode::FORBIDDEN)
     }
 }

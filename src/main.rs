@@ -10,7 +10,7 @@ use provider::sftp::SftpSource;
 use provider::sftp::connect_sftp;
 use provider::sftp::print_ssh_config;
 use ssdp::SsdpServer;
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
@@ -27,34 +27,50 @@ pub struct Cli {
 #[derive(Subcommand, Debug)]
 pub enum ProviderSubcommand {
     /// Local directory path (e.g. ~/Movies or /data/video)
-    Local { source: PathBuf, target: SocketAddr },
+    Local {
+        source: PathBuf,
+        target: SocketAddr,
+        #[arg(long = "allow", value_name="IP address", num_args = 1..)]
+        allowed: Vec<IpAddr>,
+    },
     /// Remote target (e.g. s7:~/Movies or s7:/var/media)
-    Sftp { source: String, target: SocketAddr },
+    Sftp {
+        source: String,
+        target: SocketAddr,
+        #[arg(long = "allow", value_name="IP address", num_args = 1..)]
+        allowed: Vec<IpAddr>,
+    },
     /// Remote folder path or ID (e.g. qsc:DLNA/)
-    Gdrive { source: String, target: SocketAddr },
+    Gdrive {
+        source: String,
+        target: SocketAddr,
+        #[arg(long = "allow", value_name="IP address", num_args = 1..)]
+        allowed: Vec<IpAddr>,
+    },
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // parse args
     let cli = Cli::parse();
-    let (source, target): (Arc<dyn MediaSource>, SocketAddr) = match cli.provider {
-        ProviderSubcommand::Local { source, target } => {
+    let (source, target, allowed): (Arc<dyn MediaSource>, SocketAddr, Vec<IpAddr>) = match cli.provider {
+        ProviderSubcommand::Local { source, target, allowed } => {
             //
-            (Arc::new(LocalSource::new(source)), target)
+            (Arc::new(LocalSource::new(source)), target, allowed)
         }
-        ProviderSubcommand::Sftp { source, target } => {
+        ProviderSubcommand::Sftp { source, target, allowed } => {
             let host = print_ssh_config(&source)?;
             let session = connect_sftp(&host).await?;
             //
-            (Arc::new(SftpSource::new(session, host.remote_path)), target)
+            (Arc::new(SftpSource::new(session, host.remote_path)), target, allowed)
         }
-        ProviderSubcommand::Gdrive { source, target } => {
-            println!("[INFO] args: {}, {}", source, target);
+        ProviderSubcommand::Gdrive { source, target, allowed } => {
+            println!("[INFO] args: {}, {}, {:?}", source, target, allowed);
             todo!("Implement gdrive");
         }
     };
     println!("[INFO] Starting server bound to {}", target);
+    println!("[INFO] Additional allowed IP addresses: {:?}", allowed);
 
     // create servers
     let uuid = Uuid::new_v4();
@@ -63,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // spawn Axum HTTP server task
     tokio::spawn(async move {
-        if let Err(e) = dlna_server.run(target).await {
+        if let Err(e) = dlna_server.run(target, allowed).await {
             eprintln!("[ERROR] DLNA HTTP Server failed: {e}");
         }
     });
