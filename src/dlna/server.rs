@@ -8,7 +8,7 @@ use axum::{
     Router, middleware,
     routing::{get, post},
 };
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use uuid::Uuid;
@@ -32,7 +32,7 @@ impl DlnaServer {
     ) -> Self {
         Self {
             state: Arc::new(DlnaState {
-                uuid,
+                uuid, //
                 source,
                 host: format!("{}:{}", target.ip(), target.port()),
             }),
@@ -42,9 +42,10 @@ impl DlnaServer {
     pub async fn run(
         &self, //
         addr: SocketAddr,
+        allowed: Vec<IpAddr>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        // allowed
-        let allowed_ip = addr.ip();
+        // create whitelist as target ip plus the allowed list
+        let whitelist = [vec![addr.ip()], allowed].concat();
 
         // define all the routes
         let app = Router::new()
@@ -55,12 +56,12 @@ impl DlnaServer {
             .route("/ctl/ConnectionManager", post(handle_ctl_connection_manager))
             .route("/stream/{*path}", get(handle_stream))
             .with_state(self.state.clone())
-            .layer(middleware::from_fn_with_state(allowed_ip, enforce_ip_whitelist));
+            .layer(middleware::from_fn_with_state(whitelist.clone(), enforce_ip_whitelist));
 
         // bind addr
         let listener = TcpListener::bind(addr).await?;
         println!("[INFO] Axum DLNA HTTP Server running on http://{}", addr);
-        println!("[INFO] IP whitelist active: restricting access to {}", allowed_ip);
+        println!("[INFO] IP whitelist active:\n\trestricting access to loopback and {:?}", whitelist);
 
         // serve
         axum::serve(

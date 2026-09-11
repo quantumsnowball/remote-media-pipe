@@ -53,7 +53,7 @@ pub enum ProviderSubcommand {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // parse args
     let cli = Cli::parse();
-    let (source, target, allowed_ips): (Arc<dyn MediaSource>, SocketAddr, Vec<IpAddr>) = match cli.provider {
+    let (source, target, allowed): (Arc<dyn MediaSource>, SocketAddr, Vec<IpAddr>) = match cli.provider {
         ProviderSubcommand::Local { source, target, allowed } => {
             //
             (Arc::new(LocalSource::new(source)), target, allowed)
@@ -70,7 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
     println!("[INFO] Starting server bound to {}", target);
-    println!("[INFO] Additional allowed IP addresses: {:?}", allowed_ips);
+    println!("[INFO] Additional allowed IP addresses: {:?}", allowed);
 
     // create servers
     let uuid = Uuid::new_v4();
@@ -79,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // spawn Axum HTTP server task
     tokio::spawn(async move {
-        if let Err(e) = dlna_server.run(target).await {
+        if let Err(e) = dlna_server.run(target, allowed).await {
             eprintln!("[ERROR] DLNA HTTP Server failed: {e}");
         }
     });
