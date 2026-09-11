@@ -24,7 +24,7 @@ pub async fn handle_ctl_content_directory(
     // end here if user doesn't not click on a directory
     if !body.contains("Browse") {
         return (
-            [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
+            [(header::CONTENT_TYPE, "text/xml; charset=utf-8")], //
             XML_CD_SYSTEM_UPDATE.to_string(),
         )
             .into_response();
@@ -53,12 +53,19 @@ pub async fn handle_ctl_content_directory(
             if entry.is_dir {
                 // inject directory template
                 didl_entries.push_str(&format!(
-                    include_str!("../../assets/didl_container.xml"),
+                    include_str!("../../assets/didl_container.xml"), //
                     entry.path, safe_name
                 ));
             } else {
+                // urlencode just the dirname and filename path of the path
+                let encoded_path = entry
+                    .path //
+                    .split('/')
+                    .map(urlencoding::encode)
+                    .collect::<Vec<_>>()
+                    .join("/");
+                let stream_url = format!("http://{}/stream/{}", state.host, encoded_path);
                 // inject video file template
-                let stream_url = format!("http://{}/stream{}", state.host, entry.path);
                 didl_entries.push_str(&format!(
                     include_str!("../../assets/didl_item.xml"),
                     entry.path, safe_name, entry.size, stream_url
