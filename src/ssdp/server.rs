@@ -1,6 +1,6 @@
 use std::net::{IpAddr, Ipv4Addr};
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use uuid::Uuid;
 
 pub const SSDP_IP: Ipv4Addr = Ipv4Addr::new(239, 255, 255, 250);

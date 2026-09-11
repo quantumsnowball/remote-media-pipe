@@ -1,5 +1,5 @@
-use super::server::{MEDIA_TYPE, SERVER_TYPE, SSDP_IP, SSDP_PORT};
 use super::SsdpServer;
+use super::server::{MEDIA_TYPE, SERVER_TYPE, SSDP_IP, SSDP_PORT};
 use socket2::{Domain, Protocol, Socket, Type};
 use std::io;
 use std::net::{Ipv4Addr, SocketAddrV4, UdpSocket};

@@ -2,17 +2,17 @@ mod dlna;
 mod provider;
 mod ssdp;
 use clap::Parser;
+use clap::Subcommand;
 use dlna::DlnaServer;
-use ssdp::SsdpServer;
-use uuid::Uuid;
-use std::net::SocketAddr;
-use std::sync::Arc;
-use std::sync::atomic::Ordering;
-use clap::{Subcommand};
-use std::path::PathBuf;
 use provider::MediaSource;
 use provider::local::LocalSource;
 use provider::sftp::print_ssh_config;
+use ssdp::SsdpServer;
+use std::net::SocketAddr;
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::atomic::Ordering;
+use uuid::Uuid;
 
 #[derive(Parser, Debug)]
 #[command(name = "remote-media-pipe")]
@@ -25,20 +25,11 @@ pub struct Cli {
 #[derive(Subcommand, Debug)]
 pub enum ProviderSubcommand {
     /// Local directory path (e.g. ~/Movies or /data/video)
-    Local {
-        source: PathBuf,
-        target: SocketAddr,
-    },
+    Local { source: PathBuf, target: SocketAddr },
     /// Remote target (e.g. s7:~/Movies or s7:/var/media)
-    Sftp {
-        source: String,
-        target: SocketAddr,
-    },
+    Sftp { source: String, target: SocketAddr },
     /// Remote folder path or ID (e.g. qsc:DLNA/)
-    Gdrive {
-        source: String,
-        target: SocketAddr,
-    },
+    Gdrive { source: String, target: SocketAddr },
 }
 
 #[tokio::main]
@@ -47,6 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     let (source, target): (Arc<dyn MediaSource>, SocketAddr) = match cli.provider {
         ProviderSubcommand::Local { source, target } => {
+            //
             (Arc::new(LocalSource::new(source)), target)
         }
         ProviderSubcommand::Sftp { source, target } => {
