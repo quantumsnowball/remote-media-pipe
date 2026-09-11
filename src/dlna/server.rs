@@ -1,10 +1,11 @@
 use super::connection_manager::{handle_connection_manager, handle_ctl_connection_manager};
 use super::content_directory::{handle_content_directory, handle_ctl_content_directory};
+use super::filter::enforce_ip_whitelist;
 use super::root::handle_root_desc;
 use super::stream::handle_stream;
 use crate::provider::MediaSource;
 use axum::{
-    Router,
+    Router, middleware,
     routing::{get, post},
 };
 use std::net::SocketAddr;
@@ -42,6 +43,9 @@ impl DlnaServer {
         &self, //
         addr: SocketAddr,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        // allowed
+        let allowed_ip = addr.ip();
+
         // define all the routes
         let app = Router::new()
             .route("/rootDesc.xml", get(handle_root_desc))
@@ -50,11 +54,13 @@ impl DlnaServer {
             .route("/ctl/ContentDirectory", post(handle_ctl_content_directory))
             .route("/ctl/ConnectionManager", post(handle_ctl_connection_manager))
             .route("/stream/{*path}", get(handle_stream))
-            .with_state(self.state.clone());
+            .with_state(self.state.clone())
+            .layer(middleware::from_fn_with_state(allowed_ip, enforce_ip_whitelist));
 
         // bind addr
         let listener = TcpListener::bind(addr).await?;
         println!("[INFO] Axum DLNA HTTP Server running on http://{}", addr);
+        println!("[INFO] IP whitelist active: restricting access to {}", allowed_ip);
 
         // serve
         axum::serve(
