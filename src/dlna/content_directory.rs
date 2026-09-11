@@ -69,11 +69,14 @@ pub async fn handle_ctl_content_directory(
                 // guess mime type
                 let mime = from_path(&entry.path).first_or_octet_stream().to_string();
                 // derive upnp_class from top-level type
-                let upnp_class = match &mime.split('/').next() {
-                    Some("video") => "object.item.videoItem.movie",
-                    Some("audio") => "object.item.audioItem.musicTrack",
-                    Some("image") => "object.item.imageItem.photo",
-                    _ => "object.item",
+                let upnp_class = if mime.contains("video") {
+                    "object.item.videoItem.movie"
+                } else if mime.contains("audio") {
+                    "object.item.audioItem.musicTrack"
+                } else if mime.contains("image") {
+                    "object.item.imageItem.photo"
+                } else {
+                    "object.item.textItem"
                 };
                 println!("{}, {}, {}", entry.path, mime, upnp_class);
                 // inject video file template
