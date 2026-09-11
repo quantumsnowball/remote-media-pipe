@@ -12,6 +12,7 @@ use clap::{Subcommand};
 use std::path::PathBuf;
 use provider::MediaSource;
 use provider::local::LocalSource;
+use provider::sftp::read_ssh_config;
 
 #[derive(Parser, Debug)]
 #[command(name = "remote-media-pipe")]
@@ -49,7 +50,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             (Arc::new(LocalSource::new(source)), target)
         }
         ProviderSubcommand::Sftp { source, target } => {
-            println!("[INFO] args: {}, {}", source, target);
+            let c = read_ssh_config(&source)?;
+            println!("--- SSH CONFIG RESOLUTION ---");
+            println!(" host name     : {}", c.addr);
+            println!(" port          : {}", c.port);
+            println!(" user          : {}", c.user);
+            println!(" identity file : {:?}", c.identity_file);
+            println!(" remote path   : {}", c.remote_path);
+            println!("-----------------------------");
+            println!(" target        : {}", target);
             todo!("Implement sftp");
         }
         ProviderSubcommand::Gdrive { source, target } => {
