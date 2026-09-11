@@ -1,5 +1,5 @@
 mod config;
-// mod source;
+mod connect;
 
-// pub use source::SftpSource;
 pub use config::print_ssh_config;
+pub use connect::connect_sftp;
