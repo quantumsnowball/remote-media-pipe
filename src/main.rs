@@ -6,6 +6,7 @@ use clap::Subcommand;
 use dlna::DlnaServer;
 use provider::MediaSource;
 use provider::local::LocalSource;
+use provider::sftp::connect_ssh;
 use provider::sftp::print_ssh_config;
 use ssdp::SsdpServer;
 use std::net::SocketAddr;
@@ -42,9 +43,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             (Arc::new(LocalSource::new(source)), target)
         }
         ProviderSubcommand::Sftp { source, target } => {
-            print_ssh_config(&source)?;
+            let host = print_ssh_config(&source)?;
             println!(" target        : {}", target);
-            todo!("Implement sftp");
+            connect_ssh(&host).await?;
+            todo!("open sftp channel step next");
         }
         ProviderSubcommand::Gdrive { source, target } => {
             println!("[INFO] args: {}, {}", source, target);

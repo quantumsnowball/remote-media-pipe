@@ -57,7 +57,7 @@ pub fn read_ssh_config(target: &str) -> Result<SshHostInfo, Box<dyn std::error::
     Ok(dest)
 }
 
-pub fn print_ssh_config(target: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn print_ssh_config(target: &str) -> Result<SshHostInfo, Box<dyn std::error::Error>> {
     let c = read_ssh_config(&target)?;
     println!("--- SSH CONFIG RESOLUTION ---");
     println!(" host name     : {}", c.addr);
@@ -66,5 +66,5 @@ pub fn print_ssh_config(target: &str) -> Result<(), Box<dyn std::error::Error>> 
     println!(" identity file : {:?}", c.identity_file);
     println!(" remote path   : {}", c.remote_path);
     println!("-----------------------------");
-    Ok(())
+    Ok(c)
 }
