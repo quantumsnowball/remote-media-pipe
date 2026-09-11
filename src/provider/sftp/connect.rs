@@ -1,15 +1,25 @@
 use super::config::SshHostInfo;
 use russh::keys::agent::client::AgentClient;
-use russh::keys::{PrivateKeyWithHashAlg, decode_secret_key};
+use russh::keys::{
+    PrivateKeyWithHashAlg, //
+    PublicKeyOrCertificate,
+    decode_secret_key,
+};
 use russh::*;
 use russh_sftp::client::SftpSession;
 use std::sync::Arc;
 
 struct SftpClientHandler;
 
-#[async_trait::async_trait]
 impl client::Handler for SftpClientHandler {
     type Error = russh::Error;
+
+    async fn check_server_key(
+        &mut self, //
+        _server_public_key: &PublicKeyOrCertificate,
+    ) -> Result<bool, Self::Error> {
+        Ok(true)
+    }
 }
 
 pub async fn connect_sftp(dest: &SshHostInfo) -> Result<SftpSession, Box<dyn std::error::Error>> {
@@ -67,7 +77,7 @@ pub async fn connect_sftp(dest: &SshHostInfo) -> Result<SftpSession, Box<dyn std
         session.authenticate_publickey(&dest.user, key_with_alg).await?;
     }
 
-    println!("[SUCCESS] authenticated! opening sftp subsystem channel...");
+    println!("[SUCCESS] authenticated successfully! opening sftp subsystem channel...");
 
     // 3. open sftp subsystem channel
     let channel = session.channel_open_session().await?;
