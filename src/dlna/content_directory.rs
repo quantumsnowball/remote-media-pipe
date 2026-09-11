@@ -67,13 +67,22 @@ pub async fn handle_ctl_content_directory(
                     .join("/");
                 let stream_url = format!("http://{}/stream/{}", state.host, encoded_path);
                 // guess mime type
-                let mime_type = from_path(&entry.path).first_or_octet_stream().to_string();
+                let mime = from_path(&entry.path).first_or_octet_stream().to_string();
+                // derive upnp_class from top-level type
+                let upnp_class = match &mime.split('/').next() {
+                    Some("video") => "object.item.videoItem.movie",
+                    Some("audio") => "object.item.audioItem.musicTrack",
+                    Some("image") => "object.item.imageItem.photo",
+                    _ => "object.item",
+                };
+                println!("{}, {}, {}", entry.path, mime, upnp_class);
                 // inject video file template
                 didl_entries.push_str(&format!(
                     include_str!("../../assets/didl_item.xml"),
                     entry.path, //
                     safe_name,
-                    mime_type,
+                    upnp_class,
+                    mime,
                     entry.size,
                     stream_url,
                 ));
