@@ -102,7 +102,7 @@ impl GDriveSource {
                 }
             }
 
-            // query drive api for folder/file id
+            // query drive api for folder/file/shortcut id
             let query = format!(
                 "'{}' in parents and name = '{}' and trashed = false",
                 current_id,
@@ -115,7 +115,7 @@ impl GDriveSource {
                 .header(AUTHORIZATION, format!("Bearer {}", access_token))
                 .query(&[
                     ("q", query.as_str()), //
-                    ("fields", "files(id, name, mimeType)"),
+                    ("fields", "files(id, name, mimeType, shortcutDetails)"),
                 ])
                 .send()
                 .await
@@ -128,12 +128,12 @@ impl GDriveSource {
                 io::Error::new(io::ErrorKind::NotFound, format!("path component '{}' not found", segment))
             })?;
 
+            // if entry is a shortcut, extract target_id and target_mime_type
             let (real_id, real_mime) = if file.mime_type == "application/vnd.google-apps.shortcut" {
                 if let Some(ref details) = file.shortcut_details {
-                    (
-                        details.target_id.clone().unwrap_or_else(|| file.id.clone()),
-                        details.target_mime_type.clone().unwrap_or_else(|| file.mime_type.clone()),
-                    )
+                    let tid = details.target_id.clone().unwrap_or_else(|| file.id.clone());
+                    let tmime = details.target_mime_type.clone().unwrap_or_else(|| file.mime_type.clone());
+                    (tid, tmime)
                 } else {
                     (file.id.clone(), file.mime_type.clone())
                 }
@@ -144,7 +144,7 @@ impl GDriveSource {
             current_id = real_id;
             is_dir = real_mime == "application/vnd.google-apps.folder";
 
-            // store resolved intermediate path in cache
+            // store resolved target path in cache
             let mut cache = self.path_cache.write().await;
             cache.insert(accumulated_path.clone(), (current_id.clone(), is_dir));
         }
