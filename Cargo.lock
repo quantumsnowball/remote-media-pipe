@@ -1683,6 +1683,7 @@ dependencies = [
  "russh",
  "russh-sftp",
  "serde",
+ "serde_json",
  "socket2",
  "ssh2-config",
  "tokio",
