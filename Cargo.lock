@@ -436,6 +436,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
 
 [[package]]
+name = "configparser"
+version = "3.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "031ad3d167622974ed636505ae4556267ed4aa2aea0464122fa6bc9698a32825"
+
+[[package]]
 name = "const-oid"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1132,6 +1138,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ini"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c22ec49aaf2b6ff1a7e7dd5e865a39313d86a62730154d96e199ab237661ef7"
+dependencies = [
+ "configparser",
+]
+
+[[package]]
 name = "inout"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1662,6 +1677,7 @@ dependencies = [
  "axum",
  "clap",
  "dirs 7.0.0",
+ "ini",
  "log",
  "mime_guess",
  "russh",
