@@ -5,6 +5,7 @@ use clap::Parser;
 use clap::Subcommand;
 use dlna::DlnaServer;
 use provider::MediaSource;
+use provider::gdrive::print_gdrive_config;
 use provider::local::LocalSource;
 use provider::sftp::SftpSource;
 use provider::sftp::connect_sftp;
@@ -26,21 +27,21 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum ProviderSubcommand {
-    /// Local directory path (e.g. ~/Movies or /data/video)
+    /// local directory path (e.g. ~/Movies or /data/video)
     Local {
         source: PathBuf,
         target: SocketAddr,
         #[arg(long = "allow", value_name="IP address", num_args = 1..)]
         allowed: Vec<IpAddr>,
     },
-    /// Remote target (e.g. s7:~/Movies or s7:/var/media)
+    /// remote target (e.g. s7:~/Movies or s7:/var/media)
     Sftp {
         source: String,
         target: SocketAddr,
         #[arg(long = "allow", value_name="IP address", num_args = 1..)]
         allowed: Vec<IpAddr>,
     },
-    /// Remote folder path or ID (e.g. qsc:DLNA/)
+    /// remote folder path or ID (e.g. qsc:DLNA/)
     Gdrive {
         source: String,
         target: SocketAddr,
@@ -65,7 +66,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             (Arc::new(SftpSource::new(session, host.remote_path)), target, allowed)
         }
         ProviderSubcommand::Gdrive { source, target, allowed } => {
-            println!("[INFO] args: {}, {}, {:?}", source, target, allowed);
+            let host = print_gdrive_config(&source)?;
+            //
             todo!("Implement gdrive");
         }
     };
