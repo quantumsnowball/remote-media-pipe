@@ -12,12 +12,22 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 #[derive(Debug, Deserialize)]
+struct ShortcutDetails {
+    #[serde(rename = "targetId")]
+    target_id: Option<String>,
+    #[serde(rename = "targetMimeType")]
+    target_mime_type: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
 struct DriveFile {
     id: String,
     name: String,
     #[serde(rename = "mimeType")]
     mime_type: String,
     size: Option<String>,
+    #[serde(rename = "shortcutDetails")]
+    shortcut_details: Option<ShortcutDetails>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -118,8 +128,21 @@ impl GDriveSource {
                 io::Error::new(io::ErrorKind::NotFound, format!("path component '{}' not found", segment))
             })?;
 
-            current_id = file.id.clone();
-            is_dir = file.mime_type == "application/vnd.google-apps.folder";
+            let (real_id, real_mime) = if file.mime_type == "application/vnd.google-apps.shortcut" {
+                if let Some(ref details) = file.shortcut_details {
+                    (
+                        details.target_id.clone().unwrap_or_else(|| file.id.clone()),
+                        details.target_mime_type.clone().unwrap_or_else(|| file.mime_type.clone()),
+                    )
+                } else {
+                    (file.id.clone(), file.mime_type.clone())
+                }
+            } else {
+                (file.id.clone(), file.mime_type.clone())
+            };
+
+            current_id = real_id;
+            is_dir = real_mime == "application/vnd.google-apps.folder";
 
             // store resolved intermediate path in cache
             let mut cache = self.path_cache.write().await;
@@ -144,12 +167,13 @@ impl MediaSource for GDriveSource {
 
         let query = format!("'{}' in parents and trashed = false", folder_id);
         let res: FileListResponse = self
-            .client //
+            .client
             .get("https://www.googleapis.com/drive/v3/files")
             .header(AUTHORIZATION, format!("Bearer {}", token))
             .query(&[
-                ("q", query.as_str()), //
-                ("fields", "files(id, name, mimeType, size)"),
+                ("q", query.as_str()),
+                // request shortcutDetails field from drive api
+                ("fields", "files(id, name, mimeType, size, shortcutDetails)"),
                 ("pageSize", "1000"),
             ])
             .send()
@@ -160,17 +184,28 @@ impl MediaSource for GDriveSource {
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
         let entries = res
-            .files //
+            .files
             .into_iter()
             .map(|f| {
-                let is_dir = f.mime_type == "application/vnd.google-apps.folder";
+                // resolve if entry or shortcut target is a directory
+                let is_folder = if f.mime_type == "application/vnd.google-apps.shortcut" {
+                    f.shortcut_details
+                        .as_ref()
+                        .and_then(|d| d.target_mime_type.as_deref())
+                        .map(|t| t == "application/vnd.google-apps.folder")
+                        .unwrap_or(false)
+                } else {
+                    f.mime_type == "application/vnd.google-apps.folder"
+                };
+
                 let size = f.size.and_then(|s| s.parse::<u64>().ok()).unwrap_or(0);
                 let entry_path = if path.trim_matches('/').is_empty() {
                     f.name.clone()
                 } else {
                     format!("{}/{}", path.trim_matches('/'), f.name)
                 };
-                MediaEntry { name: f.name, path: entry_path, is_dir, size }
+
+                MediaEntry { name: f.name, path: entry_path, is_dir: is_folder, size }
             })
             .collect();
 
