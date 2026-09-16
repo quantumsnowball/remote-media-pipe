@@ -28,40 +28,50 @@ struct FileListResponse {
 pub struct GDriveSource {
     pub host_info: GDriveHostInfo,
     pub client: reqwest::Client,
+    root_path: String,
     // in-memory path-to-id cache
     path_cache: Arc<RwLock<HashMap<String, (String, bool)>>>,
 }
 
 impl GDriveSource {
     pub fn new(host_info: GDriveHostInfo) -> Self {
+        let root_path = host_info.remote_path.clone();
         Self {
             host_info, //
             client: reqwest::Client::new(),
+            root_path,
             path_cache: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
-    // resolve virtual path likefolder1/file.mp4 to drive file/folder id
+    // resolve virtual path like folder1/file.mp4 to drive file/folder id
     async fn resolve_path_to_id(
         &self, //
         access_token: &str,
         path: &str,
     ) -> io::Result<(String, bool)> {
-        let clean_path = path.trim_matches('/').to_string();
-        if clean_path.is_empty() {
+        // prepend self.root_path if path is empty or relative
+        let full_path = match (self.root_path.trim_matches('/'), path.trim_matches('/')) {
+            ("", "") => String::new(),
+            ("", p) => p.to_string(),
+            (r, "") => r.to_string(),
+            (r, p) => format!("{}/{}", r, p),
+        };
+
+        if full_path.is_empty() {
             return Ok(("root".to_string(), true));
         }
 
         // fast path: read lock check
         {
             let cache = self.path_cache.read().await;
-            if let Some(entry) = cache.get(&clean_path) {
+            if let Some(entry) = cache.get(&full_path) {
                 return Ok(entry.clone());
             }
         }
 
         // resolve path level by level via API calls
-        let segments: Vec<&str> = clean_path.split('/').collect();
+        let segments: Vec<&str> = full_path.split('/').collect();
         let mut current_id = "root".to_string();
         let mut is_dir = true;
         let mut accumulated_path = String::new();
