@@ -5,7 +5,7 @@ use clap::Parser;
 use clap::Subcommand;
 use dlna::DlnaServer;
 use provider::MediaSource;
-use provider::gdrive::get_valid_access_token;
+use provider::gdrive::GDriveSource;
 use provider::gdrive::print_gdrive_config;
 use provider::local::LocalSource;
 use provider::sftp::SftpSource;
@@ -68,9 +68,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         ProviderSubcommand::Gdrive { source, target, allowed } => {
             let host = print_gdrive_config(&source)?;
-            let access_token = get_valid_access_token(&host).await?;
-            println!("access_token: {}", access_token);
-            todo!("Implement gdrive");
+            //
+            (Arc::new(GDriveSource::new(host)), target, allowed)
         }
     };
     println!("[INFO] Starting server bound to {}", target);
