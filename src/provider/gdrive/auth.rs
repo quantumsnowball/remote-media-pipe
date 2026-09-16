@@ -1,20 +1,31 @@
 use super::config::GDriveHostInfo;
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::OnceLock;
+use tokio::sync::RwLock;
 
-// this data is saved at the cache dir
+// this data is saved at the cache dir and in ram
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CachedToken {
     pub access_token: String,
     pub expires_at: DateTime<Utc>,
 }
+
 // the response
 #[derive(Deserialize)]
 struct TokenResponse {
     access_token: String,
     expires_in: i64,
+}
+
+// global in-memory token cache keyed by profile_name
+static RAM_TOKEN_CACHE: OnceLock<RwLock<HashMap<String, CachedToken>>> = OnceLock::new();
+
+fn get_ram_cache() -> &'static RwLock<HashMap<String, CachedToken>> {
+    RAM_TOKEN_CACHE.get_or_init(|| RwLock::new(HashMap::new()))
 }
 
 // resolve token cache path: ~/.cache/remote-media-pipe/tokens/<profile>.json
@@ -28,15 +39,14 @@ fn get_cache_path(profile_name: &str) -> Result<PathBuf, Box<dyn std::error::Err
     Ok(dir.join(format!("{}.json", profile_name)))
 }
 
-// read cached token if valid with a 60 second buffer
-fn load_cached_token(profile_name: &str) -> Option<String> {
+// read cached token from disk if valid with a 60 second buffer
+fn load_disk_cached_token(profile_name: &str) -> Option<CachedToken> {
     let cache_path = get_cache_path(profile_name).ok()?;
     let content = fs::read_to_string(cache_path).ok()?;
     let cached: CachedToken = serde_json::from_str(&content).ok()?;
-    // buffer 60s before actual expiration to avoid edge cases
     let now = Utc::now();
     if cached.expires_at - Duration::seconds(60) > now {
-        Some(cached.access_token) //
+        Some(cached) //
     } else {
         None
     }
@@ -44,16 +54,16 @@ fn load_cached_token(profile_name: &str) -> Option<String> {
 
 // save freshly fetched token to cache file
 fn save_cached_token(
-    profile_name: &str, //
+    profile_name: &str,
     access_token: &str,
     expires_in: i64,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<CachedToken, Box<dyn std::error::Error + Send + Sync>> {
     let cache_path = get_cache_path(profile_name)?;
     let expires_at = Utc::now() + Duration::seconds(expires_in);
     let cached = CachedToken { access_token: access_token.to_string(), expires_at };
     let json = serde_json::to_string_pretty(&cached)?;
     fs::write(cache_path, json)?;
-    Ok(())
+    Ok(cached)
 }
 
 // exchange refresh token for fresh access token via google oauth endpoint
@@ -76,27 +86,49 @@ async fn fetch_fresh_access_token(
     Ok((body.access_token, body.expires_in))
 }
 
-// get valid access token: try cache first, fallback to OAuth exchange
+// get valid access token: try ram first, then disk cache, fallback to OAuth exchange
 pub async fn get_valid_access_token(
     host_info: &GDriveHostInfo,
 ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-    // try cached token
-    if let Some(token) = load_cached_token(&host_info.profile_name) {
-        println!("[INFO] using cached access token for [{}]", host_info.profile_name);
-        return Ok(token);
+    let now = Utc::now();
+    let ram_cache = get_ram_cache();
+
+    // fast path: check ram cache with non-blocking read lock
+    {
+        let cache = ram_cache.read().await;
+        if let Some(token) = cache.get(&host_info.profile_name) {
+            if token.expires_at - Duration::seconds(60) > now {
+                println!("[INFO] using ram-cached access token for [{}]", host_info.profile_name);
+                return Ok(token.access_token.clone());
+            }
+        }
     }
 
-    // fetch fresh token if missing or expired
-    println!("[INFO] fetching fresh access token for [{}]...", host_info.profile_name);
-    let (access_token, expires_in) = fetch_fresh_access_token(
-        &host_info.client_id, //
-        &host_info.client_secret,
-        &host_info.refresh_token,
-    )
-    .await?;
+    // slow path: acquire write lock to populate ram from disk or oauth
+    let mut cache = ram_cache.write().await;
 
-    // write to cache
-    save_cached_token(&host_info.profile_name, &access_token, expires_in)?;
-    //
-    Ok(access_token.to_string())
+    // double-check in case another async task refreshed it while waiting for write lock
+    if let Some(token) = cache.get(&host_info.profile_name) {
+        if token.expires_at - Duration::seconds(60) > now {
+            return Ok(token.access_token.clone());
+        }
+    }
+
+    // try loading from disk cache
+    if let Some(disk_token) = load_disk_cached_token(&host_info.profile_name) {
+        println!("[INFO] using disk-cached access token for [{}]", host_info.profile_name);
+        cache.insert(host_info.profile_name.clone(), disk_token.clone());
+        return Ok(disk_token.access_token);
+    }
+
+    // fetch fresh token if missing or expired on both ram and disk
+    println!("[INFO] fetching fresh access token for [{}]...", host_info.profile_name);
+    let (access_token, expires_in) =
+        fetch_fresh_access_token(&host_info.client_id, &host_info.client_secret, &host_info.refresh_token).await?;
+
+    // write to disk and save to ram
+    let cached = save_cached_token(&host_info.profile_name, &access_token, expires_in)?;
+    cache.insert(host_info.profile_name.clone(), cached);
+
+    Ok(access_token)
 }
