@@ -17,6 +17,8 @@ struct TokenJson {
 pub struct GDriveHostInfo {
     pub profile_name: String,
     pub remote_path: String,
+    pub client_id: String,
+    pub client_secret: String,
     pub access_token: String,
     pub token_type: String,
     pub refresh_token: String,
@@ -50,6 +52,14 @@ fn read_gdrive_config_from_file<P: AsRef<Path>>(
     let config_section = config_ini
         .section(Some(profile_name)) //
         .ok_or_else(|| format!("profile [{}] not found in config", profile_name))?;
+    let client_id = config_section
+        .get("client_id") //
+        .ok_or_else(|| format!("client_id missing in profile [{}]", profile_name))?
+        .to_string();
+    let client_secret = config_section
+        .get("client_secret") //
+        .ok_or_else(|| format!("client_secret missing in profile [{}]", profile_name))?
+        .to_string();
     let token_str = config_section
         .get("token") //
         .ok_or_else(|| format!("token field missing in profile [{}]", profile_name))?;
@@ -57,6 +67,8 @@ fn read_gdrive_config_from_file<P: AsRef<Path>>(
     Ok(GDriveHostInfo {
         profile_name: profile_name.to_string(),
         remote_path: remote_path.to_string(),
+        client_id,
+        client_secret,
         access_token: t.access_token,
         token_type: t.token_type,
         refresh_token: t.refresh_token,
@@ -75,6 +87,8 @@ pub fn print_gdrive_config(source: &str) -> Result<GDriveHostInfo, Box<dyn std::
     println!("\n=== GDrive Host Info ===");
     println!("profile_name: {}", c.profile_name);
     println!("remote_path: {}", c.remote_path);
+    println!("client_id: {}", c.client_id);
+    println!("client_secret: {}", c.client_secret);
     println!("access_token: {}", c.access_token);
     println!("token_type: {}", c.token_type);
     println!("refresh_token: {}", c.refresh_token);
