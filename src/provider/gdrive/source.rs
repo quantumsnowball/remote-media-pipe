@@ -6,7 +6,10 @@ use axum::body::Body;
 use axum::http::Response;
 use reqwest::header::{AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, CONTENT_TYPE, RANGE};
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::io;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 #[derive(Debug, Deserialize)]
 struct DriveFile {
@@ -25,11 +28,17 @@ struct FileListResponse {
 pub struct GDriveSource {
     pub host_info: GDriveHostInfo,
     pub client: reqwest::Client,
+    // in-memory path-to-id cache
+    path_cache: Arc<RwLock<HashMap<String, (String, bool)>>>,
 }
 
 impl GDriveSource {
     pub fn new(host_info: GDriveHostInfo) -> Self {
-        Self { host_info, client: reqwest::Client::new() }
+        Self {
+            host_info, //
+            client: reqwest::Client::new(),
+            path_cache: Arc::new(RwLock::new(HashMap::new())),
+        }
     }
 
     // resolve virtual path likefolder1/file.mp4 to drive file/folder id
@@ -38,17 +47,42 @@ impl GDriveSource {
         access_token: &str,
         path: &str,
     ) -> io::Result<(String, bool)> {
-        let clean_path = path.trim_matches('/');
+        let clean_path = path.trim_matches('/').to_string();
         if clean_path.is_empty() {
-            // root folder target
             return Ok(("root".to_string(), true));
         }
 
+        // fast path: read lock check
+        {
+            let cache = self.path_cache.read().await;
+            if let Some(entry) = cache.get(&clean_path) {
+                return Ok(entry.clone());
+            }
+        }
+
+        // resolve path level by level via API calls
         let segments: Vec<&str> = clean_path.split('/').collect();
         let mut current_id = "root".to_string();
         let mut is_dir = true;
+        let mut accumulated_path = String::new();
 
         for segment in segments {
+            if !accumulated_path.is_empty() {
+                accumulated_path.push('/');
+            }
+            accumulated_path.push_str(segment);
+
+            // check if subpath is already cached
+            {
+                let cache = self.path_cache.read().await;
+                if let Some((cached_id, cached_is_dir)) = cache.get(&accumulated_path) {
+                    current_id = cached_id.clone();
+                    is_dir = *cached_is_dir;
+                    continue;
+                }
+            }
+
+            // query drive api for folder/file id
             let query = format!(
                 "'{}' in parents and name = '{}' and trashed = false",
                 current_id,
@@ -76,6 +110,10 @@ impl GDriveSource {
 
             current_id = file.id.clone();
             is_dir = file.mime_type == "application/vnd.google-apps.folder";
+
+            // store resolved intermediate path in cache
+            let mut cache = self.path_cache.write().await;
+            cache.insert(accumulated_path.clone(), (current_id.clone(), is_dir));
         }
 
         Ok((current_id, is_dir))
