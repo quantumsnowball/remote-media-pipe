@@ -18,7 +18,7 @@ struct TokenResponse {
 }
 
 // resolve token cache path: ~/.cache/remote-media-pipe/tokens/<profile>.json
-fn get_cache_path(profile_name: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
+fn get_cache_path(profile_name: &str) -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
     let home = std::env::var("HOME")?;
     let dir = PathBuf::from(home) //
         .join(".cache")
@@ -47,7 +47,7 @@ fn save_cached_token(
     profile_name: &str, //
     access_token: &str,
     expires_in: i64,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let cache_path = get_cache_path(profile_name)?;
     let expires_at = Utc::now() + Duration::seconds(expires_in);
     let cached = CachedToken { access_token: access_token.to_string(), expires_at };
@@ -61,7 +61,7 @@ async fn fetch_fresh_access_token(
     client_id: &str,
     client_secret: &str,
     refresh_token: &str,
-) -> Result<(String, i64), Box<dyn std::error::Error>> {
+) -> Result<(String, i64), Box<dyn std::error::Error + Send + Sync>> {
     let client = reqwest::Client::new();
     let params = [
         ("client_id", client_id),
@@ -77,7 +77,9 @@ async fn fetch_fresh_access_token(
 }
 
 // get valid access token: try cache first, fallback to OAuth exchange
-pub async fn get_valid_access_token(host_info: &GDriveHostInfo) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn get_valid_access_token(
+    host_info: &GDriveHostInfo,
+) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     // try cached token
     if let Some(token) = load_cached_token(&host_info.profile_name) {
         println!("[INFO] using cached access token for [{}]", host_info.profile_name);
