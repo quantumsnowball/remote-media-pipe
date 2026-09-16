@@ -1682,6 +1682,7 @@ dependencies = [
  "mime_guess",
  "russh",
  "russh-sftp",
+ "serde",
  "socket2",
  "ssh2-config",
  "tokio",
