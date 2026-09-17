@@ -1,4 +1,4 @@
-use super::{MediaEntry, MediaSource};
+use crate::provider::{MediaEntry, MediaSource};
 use async_trait::async_trait;
 use axum::{
     body::Body,
@@ -17,19 +17,13 @@ pub struct LocalSource {
 
 impl LocalSource {
     pub fn new(root_path: impl Into<PathBuf>) -> Self {
-        Self {
-            root_path: root_path.into(),
-        }
+        Self { root_path: root_path.into() }
     }
 
     /// resolves and prevents directory traversal outside `root_path`
     fn resolve_path(&self, req_path: &str) -> PathBuf {
         let clean = req_path.trim_start_matches('/');
-        if clean.is_empty() {
-            self.root_path.clone()
-        } else {
-            self.root_path.join(clean)
-        }
+        if clean.is_empty() { self.root_path.clone() } else { self.root_path.join(clean) }
     }
 
     /// parses HTTP Range headers e.g., "bytes=100-200" or "bytes=500-"
@@ -42,11 +36,7 @@ impl LocalSource {
             _ => file_size.saturating_sub(1),
         };
 
-        if start <= end && start < file_size {
-            Some((start, end.min(file_size - 1)))
-        } else {
-            None
-        }
+        if start <= end && start < file_size { Some((start, end.min(file_size - 1))) } else { None }
     }
 }
 
@@ -69,11 +59,8 @@ impl MediaSource for LocalSource {
             let metadata = entry.metadata().await;
             let size = metadata.as_ref().map(|m| m.len()).unwrap_or(0);
             let full_entry_path = entry.path();
-            let rel_path = full_entry_path
-                .strip_prefix(&self.root_path)
-                .unwrap_or(&full_entry_path)
-                .to_string_lossy()
-                .to_string();
+            let rel_path =
+                full_entry_path.strip_prefix(&self.root_path).unwrap_or(&full_entry_path).to_string_lossy().to_string();
 
             entries.push(MediaEntry {
                 name,
