@@ -1,4 +1,3 @@
-use log::debug;
 use ssh2_config::{ParseRule, SshConfig};
 use std::fs::File;
 use std::io::BufReader;
