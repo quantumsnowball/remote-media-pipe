@@ -32,11 +32,11 @@ pub struct FileListResponse {
     pub files: Vec<DriveFile>,
 }
 
-pub struct FileListCache {
+pub struct FileListBrowser {
     cache: Arc<RwLock<HashMap<String, (Instant, FileListResponse)>>>,
 }
 
-impl FileListCache {
+impl FileListBrowser {
     pub fn new() -> Self {
         Self { cache: Arc::new(RwLock::new(HashMap::new())) }
     }
