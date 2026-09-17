@@ -6,7 +6,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 use tokio::sync::RwLock;
-use tracing::info;
+use tracing::{debug, info};
 
 // this data is saved at the cache dir and in ram
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -99,7 +99,7 @@ pub async fn get_valid_access_token(
         let cache = ram_cache.read().await;
         if let Some(token) = cache.get(&host_info.profile_name) {
             if token.expires_at - Duration::seconds(60) > now {
-                info!("using ram-cached access token for [{}]", host_info.profile_name);
+                debug!("using ram-cached access token for [{}]", host_info.profile_name);
                 return Ok(token.access_token.clone());
             }
         }
@@ -117,7 +117,7 @@ pub async fn get_valid_access_token(
 
     // try loading from disk cache
     if let Some(disk_token) = load_disk_cached_token(&host_info.profile_name) {
-        info!("using disk-cached access token for [{}]", host_info.profile_name);
+        debug!("using disk-cached access token for [{}]", host_info.profile_name);
         cache.insert(host_info.profile_name.clone(), disk_token.clone());
         return Ok(disk_token.access_token);
     }
