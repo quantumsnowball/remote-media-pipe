@@ -4,7 +4,7 @@ use std::io;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::time::{Duration, Instant};
-use tracing::{debug, warn};
+use tracing::debug;
 
 const DIR_CACHE_TTL: Duration = Duration::from_secs(300);
 
@@ -61,7 +61,7 @@ impl FileListCache {
 
         // cache miss: fetch from google drive api
         let query = format!("'{}' in parents and trashed = false", folder_id);
-        warn!("Query to google about path={path}, id={folder_id}");
+        debug!("Query to google about path={path}, id={folder_id}");
 
         let res: FileListResponse = client
             .get("https://www.googleapis.com/drive/v3/files")
