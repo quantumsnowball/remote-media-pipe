@@ -3,6 +3,7 @@ use super::server::{MEDIA_TYPE, SERVER_TYPE, SSDP_IP, SSDP_PORT};
 use socket2::{Domain, Protocol, Socket, Type};
 use std::io;
 use std::net::{SocketAddr, SocketAddrV4, UdpSocket};
+use tracing::info;
 
 impl SsdpServer {
     /// Auto advertise itself (referencing rclone)
@@ -39,7 +40,7 @@ impl SsdpServer {
             std_sock.send_to(msg.as_bytes(), target_addr)?;
         }
 
-        println!("[INFO] Rust custom SSDP server started");
+        info!("Rust custom SSDP server started");
         Ok(())
     }
 }
