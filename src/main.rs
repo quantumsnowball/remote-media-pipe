@@ -17,6 +17,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use time::macros::format_description;
+use tracing::Level;
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt::time::UtcTime;
@@ -58,13 +59,26 @@ pub enum ProviderSubcommand {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // logging
-    let time_format = format_description!("[hour]:[minute]:[second]");
-    let timer = UtcTime::new(time_format);
-    // initialize tracing with env filter fallback to info level
-    tracing_subscriber::fmt()
-        .with_timer(timer)
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
-        .init();
+    // determine runtime filter level
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let is_debug = env_filter.max_level_hint().map_or(false, |l| l >= Level::DEBUG);
+    if is_debug {
+        let time_format = format_description!("[year]-[month]-[day] [hour]:[minute]:[second]");
+        let timer = UtcTime::new(time_format);
+        tracing_subscriber::fmt()
+            .compact() //
+            .with_target(true)
+            .with_timer(timer)
+            .with_env_filter(env_filter)
+            .init();
+    } else {
+        tracing_subscriber::fmt()
+            .compact() //
+            .with_target(false)
+            .without_time()
+            .with_env_filter(env_filter)
+            .init();
+    }
 
     // parse args
     let cli = Cli::parse();
