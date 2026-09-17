@@ -58,7 +58,7 @@ pub enum ProviderSubcommand {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // logging
-    let time_format = format_description!("[year]-[month]-[day] [hour]:[minute]:[second]");
+    let time_format = format_description!("[hour]:[minute]:[second]");
     let timer = UtcTime::new(time_format);
     // initialize tracing with env filter fallback to info level
     tracing_subscriber::fmt()
