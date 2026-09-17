@@ -5,6 +5,7 @@ use axum::{
     response::Response,
 };
 use std::net::{IpAddr, SocketAddr};
+use tracing::warn;
 
 // ip whitelist middleware checking peer address against server bind target
 pub async fn enforce_ip_whitelist(
@@ -18,7 +19,7 @@ pub async fn enforce_ip_whitelist(
     if src_ip.is_loopback() || whitelist.contains(&src_ip) {
         Ok(next.run(request).await)
     } else {
-        println!("[WARN] blocked request from unauthorized ip: {}", src_ip);
+        warn!("blocked request from unauthorized ip: {}", src_ip);
         Err(StatusCode::FORBIDDEN)
     }
 }
