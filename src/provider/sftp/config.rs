@@ -2,6 +2,7 @@ use ssh2_config::{ParseRule, SshConfig};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
+use tracing::debug;
 
 #[derive(Debug)]
 pub struct SshHostInfo {
@@ -24,10 +25,10 @@ pub fn read_ssh_config(target: &str) -> Result<SshHostInfo, Box<dyn std::error::
 
     // locate ~/.ssh/config
     let ssh_config_path = dirs::home_dir()
-        .ok_or("could not find home directory")?
+        .ok_or("could not find home directory")? //
         .join(".ssh/config");
 
-    println!("[DEBUG] reading ssh config from: {}", ssh_config_path.display());
+    debug!("reading ssh config from: {}", ssh_config_path.display());
 
     if !ssh_config_path.exists() {
         return Err(format!("ssh config file not found at {}", ssh_config_path.display()).into());
@@ -59,12 +60,12 @@ pub fn read_ssh_config(target: &str) -> Result<SshHostInfo, Box<dyn std::error::
 
 pub fn print_ssh_config(target: &str) -> Result<SshHostInfo, Box<dyn std::error::Error>> {
     let c = read_ssh_config(&target)?;
-    println!("--- SSH CONFIG RESOLUTION ---");
-    println!(" host name     : {}", c.addr);
-    println!(" port          : {}", c.port);
-    println!(" user          : {}", c.user);
-    println!(" identity file : {:?}", c.identity_file);
-    println!(" remote path   : {}", c.remote_path);
-    println!("-----------------------------");
+    debug!("--- SSH CONFIG RESOLUTION ---");
+    debug!(" host name     : {}", c.addr);
+    debug!(" port          : {}", c.port);
+    debug!(" user          : {}", c.user);
+    debug!(" identity file : {:?}", c.identity_file);
+    debug!(" remote path   : {}", c.remote_path);
+    debug!("-----------------------------");
     Ok(c)
 }

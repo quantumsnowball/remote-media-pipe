@@ -5,6 +5,7 @@ use std::io;
 use std::net::{Ipv4Addr, SocketAddrV4, UdpSocket};
 use std::sync::atomic::Ordering;
 use std::time::Duration;
+use tracing::{debug, error, info};
 
 impl SsdpServer {
     /// Listen for discovery SSDP queries and respond to them
@@ -25,7 +26,7 @@ impl SsdpServer {
         sock.set_read_timeout(Some(Duration::from_millis(500)))?;
 
         let std_sock: UdpSocket = sock.into();
-        println!("[INFO] Listening for SSDP M-SEARCH requests on port {}...", SSDP_PORT);
+        info!("Listening for SSDP M-SEARCH requests on port {}...", SSDP_PORT);
 
         let mut buf = [0u8; 1024];
 
@@ -47,9 +48,9 @@ impl SsdpServer {
                     let request = &buf[..len];
                     if request.starts_with(b"M-SEARCH") {
                         if let Err(e) = std_sock.send_to(response_msg.as_bytes(), src_addr) {
-                            eprintln!("[ERROR] Failed to respond to {}: {}", src_addr, e);
+                            error!("Failed to respond to {}: {}", src_addr, e);
                         } else {
-                            println!("[DEBUG] sock.send_to(message, addr={})", src_addr);
+                            debug!("sock.send_to(message, addr={})", src_addr);
                         }
                     }
                 }
@@ -57,13 +58,13 @@ impl SsdpServer {
                     continue;
                 }
                 Err(e) => {
-                    eprintln!("[ERROR] SSDP socket error: {}", e);
+                    error!("SSDP socket error: {}", e);
                     return Err(e);
                 }
             }
         }
 
-        println!("[INFO] SSDP listener stopped cleanly.");
+        info!("SSDP listener stopped cleanly.");
         Ok(())
     }
 }

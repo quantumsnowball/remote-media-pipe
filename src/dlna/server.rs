@@ -11,6 +11,7 @@ use axum::{
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 use tokio::net::TcpListener;
+use tracing::info;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -60,8 +61,8 @@ impl DlnaServer {
 
         // bind addr
         let listener = TcpListener::bind(addr).await?;
-        println!("[INFO] Axum DLNA HTTP Server running on http://{}", addr);
-        println!("[INFO] IP whitelist active:\n\trestricting access to loopback and {:?}", whitelist);
+        info!("Axum DLNA HTTP Server running on http://{}", addr);
+        info!("IP whitelist active:\n\trestricting access to loopback and {:?}", whitelist);
 
         // serve
         axum::serve(

@@ -2,13 +2,14 @@ use super::server::DlnaState;
 use axum::{extract::State, http::header, response::IntoResponse};
 use mime_guess::from_path;
 use std::sync::Arc;
+use tracing::{debug, info};
 
 const XML_CD_SCPD: &str = include_str!("../../assets/ContentDirectory.xml");
 const XML_CD_SYSTEM_UPDATE: &str = include_str!("../../assets/cd_system_update.xml");
 const SOAP_BROWSE_WRAPPER: &str = include_str!("../../assets/soap_browse_wrapper.xml");
 
 pub async fn handle_content_directory() -> impl IntoResponse {
-    println!("[INFO] handle_content_directory");
+    info!("handle_content_directory");
 
     (
         [(header::CONTENT_TYPE, "text/xml; charset=utf-8")], //
@@ -20,7 +21,7 @@ pub async fn handle_ctl_content_directory(
     State(state): State<Arc<DlnaState>>, //
     body: String,
 ) -> impl IntoResponse {
-    println!("[INFO] handle_ctl_content_directory");
+    info!("handle_ctl_content_directory");
 
     // end here if user doesn't not click on a directory
     if !body.contains("Browse") {
@@ -78,7 +79,7 @@ pub async fn handle_ctl_content_directory(
                 } else {
                     "object.item.textItem"
                 };
-                println!("{}, {}, {}", entry.path, mime, upnp_class);
+                debug!("{}, {}, {}", entry.path, mime, upnp_class);
                 // inject video file template
                 didl_entries.push_str(&format!(
                     include_str!("../../assets/didl_item.xml"),

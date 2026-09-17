@@ -8,6 +8,7 @@ use russh::keys::{
 use russh::*;
 use russh_sftp::client::SftpSession;
 use std::sync::Arc;
+use tracing::info;
 
 struct SftpClientHandler;
 
@@ -23,7 +24,7 @@ impl client::Handler for SftpClientHandler {
 }
 
 pub async fn connect_sftp(dest: &SshHostInfo) -> Result<SftpSession, Box<dyn std::error::Error>> {
-    println!("[INFO] connecting to {}:{}...", dest.addr, dest.port);
+    info!("connecting to {}:{}...", dest.addr, dest.port);
 
     let config = Arc::new(client::Config::default());
     let mut session = client::connect(config, (dest.addr.as_str(), dest.port), SftpClientHandler).await?;
@@ -44,7 +45,7 @@ pub async fn connect_sftp(dest: &SshHostInfo) -> Result<SftpSession, Box<dyn std
                     .await
                     .is_ok()
                 {
-                    println!("[INFO] authenticated via ssh-agent for user '{}'", dest.user);
+                    info!("authenticated via ssh-agent for user '{}'", dest.user);
                     authenticated = true;
                     break;
                 }
@@ -71,13 +72,13 @@ pub async fn connect_sftp(dest: &SshHostInfo) -> Result<SftpSession, Box<dyn std
             }
         };
 
-        println!("[INFO] authenticating using key file: {}", key_path.display());
+        info!("authenticating using key file: {}", key_path.display());
         let key_pair = decode_secret_key(&std::fs::read_to_string(&key_path)?, None)?;
         let key_with_alg = PrivateKeyWithHashAlg::new(Arc::new(key_pair), None);
         session.authenticate_publickey(&dest.user, key_with_alg).await?;
     }
 
-    println!("[SUCCESS] authenticated successfully! opening sftp subsystem channel...");
+    info!("authenticated successfully! opening sftp subsystem channel...");
 
     // 3. open sftp subsystem channel
     let channel = session.channel_open_session().await?;

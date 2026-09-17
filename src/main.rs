@@ -16,6 +16,10 @@ use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
+use time::macros::format_description;
+use tracing::{error, info};
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::fmt::time::UtcTime;
 use uuid::Uuid;
 
 #[derive(Parser, Debug)]
@@ -53,6 +57,15 @@ pub enum ProviderSubcommand {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // logging
+    let time_format = format_description!("[hour]:[minute]:[second]");
+    let timer = UtcTime::new(time_format);
+    // initialize tracing with env filter fallback to info level
+    tracing_subscriber::fmt()
+        .with_timer(timer)
+        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+        .init();
+
     // parse args
     let cli = Cli::parse();
     let (source, target, allowed): (Arc<dyn MediaSource>, SocketAddr, Vec<IpAddr>) = match cli.provider {
@@ -72,8 +85,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             (Arc::new(GDriveSource::new(host)), target, allowed)
         }
     };
-    println!("[INFO] Starting server bound to {}", target);
-    println!("[INFO] Additional allowed IP addresses: {:?}", allowed);
+    info!("Starting server bound to {}", target);
+    info!("Additional allowed IP addresses: {:?}", allowed);
 
     // create servers
     let uuid = Uuid::new_v4();
@@ -83,7 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // spawn Axum HTTP server task
     tokio::spawn(async move {
         if let Err(e) = dlna_server.run(target, allowed).await {
-            eprintln!("[ERROR] DLNA HTTP Server failed: {e}");
+            error!("DLNA HTTP Server failed: {e}");
         }
     });
 
@@ -95,16 +108,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let shutdown_signal = ssdp_server.shutdown_handle();
     let ssdp_handle = tokio::task::spawn_blocking(move || {
         if let Err(e) = ssdp_clone.listen() {
-            eprintln!("[ERROR] SSDP server error: {e}");
+            error!("SSDP server error: {e}");
         }
     });
 
     // handle graceful exit
     tokio::signal::ctrl_c().await?;
-    println!("\nReceived Ctrl+C, shutting down...");
+    info!("\nReceived Ctrl+C, shutting down...");
     shutdown_signal.store(false, Ordering::SeqCst);
     let _ = ssdp_handle.await;
-    println!("Shutdown complete.");
+    info!("Shutdown complete.");
 
     //
     Ok(())

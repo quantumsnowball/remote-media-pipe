@@ -2,6 +2,7 @@ use ini::Ini;
 use serde::Deserialize;
 use std::fs;
 use std::path::{Path, PathBuf};
+use tracing::debug;
 
 // internal helper struct to deserialize token json field from ini
 #[derive(Debug, Deserialize)]
@@ -84,14 +85,14 @@ pub fn read_gdrive_config(source: &str) -> Result<GDriveHostInfo, Box<dyn std::e
 
 pub fn print_gdrive_config(source: &str) -> Result<GDriveHostInfo, Box<dyn std::error::Error>> {
     let c = read_gdrive_config(&source)?;
-    println!("\n=== GDrive Host Info ===");
-    println!("profile_name: {}", c.profile_name);
-    println!("remote_path: {}", c.remote_path);
-    println!("client_id: {}", c.client_id);
-    println!("client_secret: {}", c.client_secret);
-    println!("access_token: {}", c.access_token);
-    println!("token_type: {}", c.token_type);
-    println!("refresh_token: {}", c.refresh_token);
-    println!("expiry: {}", c.expiry);
+    debug!("\n=== GDrive Host Info ===");
+    debug!("profile_name: {}", c.profile_name);
+    debug!("remote_path: {}", c.remote_path);
+    debug!("client_id: {}", c.client_id);
+    debug!("client_secret: {}", c.client_secret);
+    debug!("access_token: {}", c.access_token);
+    debug!("token_type: {}", c.token_type);
+    debug!("refresh_token: {}", c.refresh_token);
+    debug!("expiry: {}", c.expiry);
     Ok(c)
 }
