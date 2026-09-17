@@ -1,43 +1,15 @@
 use super::auth::get_valid_access_token;
 use super::config::GDriveHostInfo;
+use super::file_list::{FileListCache, FileListResponse};
 use crate::provider::{MediaEntry, MediaSource};
 use async_trait::async_trait;
 use axum::body::Body;
 use axum::http::Response;
 use reqwest::header::{AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, CONTENT_TYPE, RANGE};
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::io;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tokio::time::{Duration, Instant};
-use tracing::{debug, warn};
-
-const DIR_CACHE_TTL: Duration = Duration::from_secs(300);
-
-#[derive(Debug, Deserialize)]
-struct ShortcutDetails {
-    #[serde(rename = "targetId")]
-    target_id: Option<String>,
-    #[serde(rename = "targetMimeType")]
-    target_mime_type: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct DriveFile {
-    id: String,
-    name: String,
-    #[serde(rename = "mimeType")]
-    mime_type: String,
-    size: Option<String>,
-    #[serde(rename = "shortcutDetails")]
-    shortcut_details: Option<ShortcutDetails>,
-}
-
-#[derive(Debug, Deserialize)]
-struct FileListResponse {
-    files: Vec<DriveFile>,
-}
 
 pub struct GDriveSource {
     pub host_info: GDriveHostInfo,
@@ -45,8 +17,7 @@ pub struct GDriveSource {
     root_path: String,
     // in-memory path-to-id cache
     path_cache: Arc<RwLock<HashMap<String, (String, bool)>>>,
-    // in-memory query cache mapping folder_id to (timestamp, entries)
-    dir_cache: Arc<RwLock<HashMap<String, (Instant, Vec<MediaEntry>)>>>,
+    file_list_cache: FileListCache,
 }
 
 impl GDriveSource {
@@ -57,7 +28,7 @@ impl GDriveSource {
             client: reqwest::Client::new(),
             root_path,
             path_cache: Arc::new(RwLock::new(HashMap::new())),
-            dir_cache: Arc::new(RwLock::new(HashMap::new())),
+            file_list_cache: FileListCache::new(),
         }
     }
 
@@ -172,36 +143,8 @@ impl MediaSource for GDriveSource {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "path is not a directory"));
         }
 
-        // check query cache before sending request to google
-        {
-            let cache = self.dir_cache.read().await;
-            if let Some((fetched_at, entries)) = cache.get(&folder_id) {
-                if fetched_at.elapsed() < DIR_CACHE_TTL {
-                    debug!("Serving read_dir from cache for path={path}, id={folder_id}");
-                    return Ok(entries.clone());
-                }
-            }
-        }
-
-        // cache miss: fetch from google drive api
-        let query = format!("'{}' in parents and trashed = false", folder_id);
-        warn!("Query to google about path={path}, id={folder_id}");
-        let res: FileListResponse = self
-            .client
-            .get("https://www.googleapis.com/drive/v3/files")
-            .header(AUTHORIZATION, format!("Bearer {}", token))
-            .query(&[
-                ("q", query.as_str()),
-                // request shortcutDetails field from drive api
-                ("fields", "files(id, name, mimeType, size, shortcutDetails)"),
-                ("pageSize", "1000"),
-            ])
-            .send()
-            .await
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?
-            .json()
-            .await
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        // fetch response directly from file_list module (transparently cached)
+        let res = self.file_list_cache.get_file_list_response(&self.client, &token, &folder_id, path).await?;
 
         let entries: Vec<MediaEntry> = res
             .files
@@ -228,13 +171,7 @@ impl MediaSource for GDriveSource {
                 MediaEntry { name: f.name, path: entry_path, is_dir: is_folder, size }
             })
             .collect();
-
-        // store result in dir_cache
-        {
-            let mut cache = self.dir_cache.write().await;
-            cache.insert(folder_id, (Instant::now(), entries.clone()));
-        }
-
+        //
         Ok(entries)
     }
 
