@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use axum::body::Body;
 use axum::http::Response;
 use reqwest::Client;
-use reqwest::header::{AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, CONTENT_TYPE, RANGE};
+use reqwest::header::{ACCEPT_RANGES, AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, CONTENT_TYPE, RANGE};
 use std::{io, time::Duration};
 
 pub struct GDriveSource {
@@ -111,7 +111,10 @@ impl MediaSource for GDriveSource {
         let res = req.send().await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         // get response
         let status = res.status();
-        let mut builder = Response::builder().status(status);
+        let mut builder = Response::builder()
+            .status(status)
+            // explicitly tell player that byte range seeking is allowed
+            .header(ACCEPT_RANGES, "bytes");
 
         // pass through critical headers like content-type and content-range
         if let Some(ct) = res.headers().get(CONTENT_TYPE) {
