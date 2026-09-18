@@ -6,8 +6,9 @@ use crate::provider::{MediaEntry, MediaSource};
 use async_trait::async_trait;
 use axum::body::Body;
 use axum::http::Response;
+use reqwest::Client;
 use reqwest::header::{AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, CONTENT_TYPE, RANGE};
-use std::io;
+use std::{io, time::Duration};
 
 pub struct GDriveSource {
     pub host_info: GDriveHostInfo,
@@ -19,10 +20,17 @@ pub struct GDriveSource {
 
 impl GDriveSource {
     pub fn new(host_info: GDriveHostInfo) -> Self {
+        let client = Client::builder()
+            .tcp_nodelay(true) //
+            .tcp_keepalive(Duration::from_secs(60))
+            .pool_idle_timeout(Duration::from_secs(90))
+            .pool_max_idle_per_host(10)
+            .build()
+            .unwrap_or_else(|_| Client::new());
         let root_path = host_info.remote_path.clone();
         Self {
             host_info, //
-            client: reqwest::Client::new(),
+            client,
             root_path,
             path_resolver: PathResolver::new(),
             file_list_browser: FileListBrowser::new(),
