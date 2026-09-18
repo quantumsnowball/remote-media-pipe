@@ -19,8 +19,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // parse args
     let (source, target, allowed) = parse_and_resolve_args().await?;
-    info!("Starting server bound to {}", target);
-    info!("Additional allowed IP addresses: {:?}", allowed);
 
     // create servers
     let uuid = Uuid::new_v4();

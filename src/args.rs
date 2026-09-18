@@ -6,6 +6,7 @@ use clap::{Parser, Subcommand};
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
+use tracing::info;
 
 #[derive(Parser, Debug)]
 #[command(name = "remote-media-pipe")]
@@ -74,6 +75,8 @@ pub async fn parse_and_resolve_args() -> Result<ResolvedArgs, Box<dyn std::error
             )
         }
     };
+    info!("Starting server bound to {}", target);
+    info!("Additional allowed IP addresses: {:?}", allowed);
     //
     Ok((source, target, allowed))
 }
