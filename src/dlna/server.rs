@@ -62,7 +62,8 @@ impl DlnaServer {
         // bind addr
         let listener = TcpListener::bind(addr).await?;
         info!("Axum DLNA HTTP Server running on http://{}", addr);
-        info!("IP whitelist active:\n\trestricting access to loopback and {:?}", whitelist);
+        info!("IP whitelist active");
+        info!("Only allow {:?} and loopback", whitelist);
 
         // serve
         axum::serve(
