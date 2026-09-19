@@ -1,0 +1,5 @@
+<item id="{}" parentID="0" restricted="1">
+    <dc:title>{}</dc:title>
+    <upnp:class>{}</upnp:class>
+    <res protocolInfo="http-get:*:{}:DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000" size="{}">{}</res>
+</item>
