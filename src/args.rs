@@ -47,8 +47,13 @@ pub type ResolvedArgs = (
     Vec<IpAddr>,
 );
 pub async fn parse_and_resolve_args() -> Result<ResolvedArgs, Box<dyn std::error::Error>> {
+    // log name and version info
+    let name = env!("CARGO_PKG_NAME");
+    let version = env!("CARGO_PKG_VERSION");
+    info!("Running {} version {}", name, version);
+
+    // parse cli
     let cli = Cli::parse();
-    //
     let (source, target, allowed): ResolvedArgs = match cli.provider {
         ProviderSubcommand::Local { source, target, allowed } => {
             (
