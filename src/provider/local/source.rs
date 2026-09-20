@@ -10,6 +10,8 @@ use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, SeekFrom};
 use tokio_util::io::ReaderStream;
 
+const STREAM_BUFFER_SIZE: usize = 64 * 1024; // 64 kb read buffer for smooth video seeking
+
 /// local filesystem provider implementing `MediaSource`
 pub struct LocalSource {
     root_path: PathBuf,
@@ -17,13 +19,26 @@ pub struct LocalSource {
 
 impl LocalSource {
     pub fn new(root_path: impl Into<PathBuf>) -> Self {
-        Self { root_path: root_path.into() }
+        let path = root_path.into();
+        let canonical_root = path.canonicalize().unwrap_or(path);
+        Self { root_path: canonical_root }
     }
 
     /// resolves and prevents directory traversal outside `root_path`
-    fn resolve_path(&self, req_path: &str) -> PathBuf {
+    fn resolve_path(&self, req_path: &str) -> io::Result<PathBuf> {
         let clean = req_path.trim_start_matches('/');
-        if clean.is_empty() { self.root_path.clone() } else { self.root_path.join(clean) }
+        let target = if clean.is_empty() { self.root_path.clone() } else { self.root_path.join(clean) };
+
+        // resolve canonical path and check boundary to prevent directory traversal
+        let canonical_target = target
+            .canonicalize()
+            .map_err(|_| io::Error::new(io::ErrorKind::NotFound, "file or directory not found"))?;
+
+        if !canonical_target.starts_with(&self.root_path) {
+            return Err(io::Error::new(io::ErrorKind::PermissionDenied, "access outside root directory is forbidden"));
+        }
+
+        Ok(canonical_target)
     }
 
     /// parses HTTP Range headers e.g., "bytes=100-200" or "bytes=500-"
@@ -36,7 +51,7 @@ impl LocalSource {
             _ => file_size.saturating_sub(1),
         };
 
-        if start <= end && start < file_size { Some((start, end.min(file_size - 1))) } else { None }
+        if start <= end && start < file_size { Some((start, end.min(file_size.saturating_sub(1)))) } else { None }
     }
 }
 
@@ -46,7 +61,7 @@ impl MediaSource for LocalSource {
         &self, //
         relative_path: &str,
     ) -> io::Result<Vec<MediaEntry>> {
-        let target_path = self.resolve_path(relative_path);
+        let target_path = self.resolve_path(relative_path)?;
         let mut read_dir = tokio::fs::read_dir(&target_path).await?;
         let mut entries = Vec::new();
 
@@ -77,24 +92,27 @@ impl MediaSource for LocalSource {
         path: &str,
         range_header: Option<&str>,
     ) -> io::Result<Response<Body>> {
-        let file_path = self.resolve_path(path);
+        let file_path = self.resolve_path(path)?;
         let mut file = File::open(&file_path).await?;
         let metadata = file.metadata().await?;
         let file_size = metadata.len();
 
-        // partial Content (HTTP 206) - range request for seeking
+        // infer content-type dynamically from filename instead of hardcoding mp4
+        let mime_type = mime_guess::from_path(&file_path).first_or_octet_stream().to_string();
+
+        // partial content (HTTP 206) - range request for seeking
         if let Some(range_raw) = range_header {
             if let Some((start, end)) = Self::parse_range(range_raw, file_size) {
                 let chunk_length = end - start + 1;
 
                 file.seek(SeekFrom::Start(start)).await?;
                 let limited_reader = file.take(chunk_length);
-                let stream = ReaderStream::new(limited_reader);
+                let stream = ReaderStream::with_capacity(limited_reader, STREAM_BUFFER_SIZE);
 
                 let response = (
                     StatusCode::PARTIAL_CONTENT,
                     [
-                        (header::CONTENT_TYPE, "video/mp4"),
+                        (header::CONTENT_TYPE, mime_type.as_str()),
                         (header::ACCEPT_RANGES, "bytes"),
                         (header::CONTENT_RANGE, &format!("bytes {}-{}/{}", start, end, file_size)),
                         (header::CONTENT_LENGTH, &chunk_length.to_string()),
@@ -107,12 +125,12 @@ impl MediaSource for LocalSource {
             }
         }
 
-        // full Content (HTTP 200) - initial request without Range
-        let stream = ReaderStream::new(file);
+        // full content (HTTP 200) - initial request without Range
+        let stream = ReaderStream::with_capacity(file, STREAM_BUFFER_SIZE);
         let response = (
             StatusCode::OK,
             [
-                (header::CONTENT_TYPE, "video/mp4"),
+                (header::CONTENT_TYPE, mime_type.as_str()),
                 (header::ACCEPT_RANGES, "bytes"),
                 (header::CONTENT_LENGTH, &file_size.to_string()),
             ],
