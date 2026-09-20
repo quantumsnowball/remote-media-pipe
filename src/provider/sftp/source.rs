@@ -9,8 +9,10 @@ use russh_sftp::client::SftpSession;
 use std::io;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::io::AsyncSeekExt;
+use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio_util::io::ReaderStream;
+
+const STREAM_BUFFER_SIZE: usize = 64 * 1024; // 64 kb read buffer for sftp streaming
 
 pub struct SftpSource {
     sftp: Arc<SftpSession>,
@@ -20,7 +22,7 @@ pub struct SftpSource {
 impl SftpSource {
     pub fn new(sftp: SftpSession, root_path: impl Into<PathBuf>) -> Self {
         Self {
-            sftp: Arc::new(sftp),
+            sftp: Arc::new(sftp), //
             root_path: root_path.into(),
         }
     }
@@ -28,7 +30,7 @@ impl SftpSource {
     fn resolve_path(&self, req_path: &str) -> PathBuf {
         let clean = req_path.trim_start_matches('/');
         if clean.is_empty() {
-            self.root_path.clone()
+            self.root_path.clone() //
         } else {
             self.root_path.join(clean)
         }
@@ -44,7 +46,7 @@ impl SftpSource {
         };
 
         if start <= end && start < file_size {
-            Some((start, end.min(file_size - 1)))
+            Some((start, end.min(file_size.saturating_sub(1)))) //
         } else {
             None
         }
@@ -81,7 +83,7 @@ impl MediaSource for SftpSource {
                 .to_string();
 
             entries.push(MediaEntry {
-                name,
+                name, //
                 path: format!("/{}", rel_path.trim_start_matches('/')),
                 is_dir,
                 size,
@@ -99,24 +101,23 @@ impl MediaSource for SftpSource {
             .await
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
-        let metadata = file
-            .metadata()
-            .await
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let metadata = file.metadata().await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         let file_size = metadata.size.unwrap_or(0);
+
+        let mime_type = mime_guess::from_path(&file_path).first_or_octet_stream().to_string();
 
         if let Some(range_raw) = range_header {
             if let Some((start, end)) = Self::parse_range(range_raw, file_size) {
                 let chunk_length = end - start + 1;
 
                 file.seek(std::io::SeekFrom::Start(start)).await?;
-                let limited_reader = tokio::io::AsyncReadExt::take(file, chunk_length);
-                let stream = ReaderStream::new(limited_reader);
+                let limited_reader = file.take(chunk_length);
+                let stream = ReaderStream::with_capacity(limited_reader, STREAM_BUFFER_SIZE);
 
                 return Ok((
                     StatusCode::PARTIAL_CONTENT,
                     [
-                        (header::CONTENT_TYPE, "video/mp4"),
+                        (header::CONTENT_TYPE, mime_type.as_str()),
                         (header::ACCEPT_RANGES, "bytes"),
                         (header::CONTENT_RANGE, &format!("bytes {}-{}/{}", start, end, file_size)),
                         (header::CONTENT_LENGTH, &chunk_length.to_string()),
@@ -127,11 +128,11 @@ impl MediaSource for SftpSource {
             }
         }
 
-        let stream = ReaderStream::new(file);
+        let stream = ReaderStream::with_capacity(file, STREAM_BUFFER_SIZE);
         Ok((
             StatusCode::OK,
             [
-                (header::CONTENT_TYPE, "video/mp4"),
+                (header::CONTENT_TYPE, mime_type.as_str()),
                 (header::ACCEPT_RANGES, "bytes"),
                 (header::CONTENT_LENGTH, &file_size.to_string()),
             ],
