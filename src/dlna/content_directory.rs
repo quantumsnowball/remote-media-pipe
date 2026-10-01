@@ -8,6 +8,15 @@ const XML_CD_SCPD: &str = include_str!("../../assets/ContentDirectory.xml");
 const XML_CD_SYSTEM_UPDATE: &str = include_str!("../../assets/cd_system_update.xml");
 const SOAP_BROWSE_WRAPPER: &str = include_str!("../../assets/soap_browse_wrapper.xml");
 
+fn safe_replace(s: &str) -> String {
+    // escape all chars that will break listing in DeoVR
+    s //
+        .replace('&', ".")
+        .replace('<', "(")
+        .replace('>', ")")
+        .replace('"', "'")
+}
+
 pub async fn handle_content_directory() -> impl IntoResponse {
     debug!("handle_content_directory");
 
@@ -50,13 +59,14 @@ pub async fn handle_ctl_content_directory(
     let mut didl_entries = String::new();
     if let Ok(entries) = state.source.read_dir(&target_dir).await {
         for entry in entries {
-            let safe_name = entry.name.replace('&', ".");
+            let safe_entry_name = safe_replace(&entry.name);
+            let safe_entry_path = safe_replace(&entry.path);
 
             if entry.is_dir {
                 // inject directory template
                 didl_entries.push_str(&format!(
                     include_str!("../../assets/didl_container.xml"), //
-                    entry.path, safe_name
+                    safe_entry_path, safe_entry_name
                 ));
             } else {
                 // urlencode just the dirname and filename path of the path
@@ -68,7 +78,7 @@ pub async fn handle_ctl_content_directory(
                     .join("/");
                 let stream_url = format!("http://{}/stream/{}", state.host, encoded_path);
                 // guess mime type
-                let mime = from_path(&entry.path).first_or_octet_stream().to_string();
+                let mime = from_path(&safe_entry_path).first_or_octet_stream().to_string();
                 // derive upnp_class from top-level type
                 let upnp_class = if mime.contains("video") {
                     "object.item.videoItem.movie"
@@ -79,12 +89,12 @@ pub async fn handle_ctl_content_directory(
                 } else {
                     "object.item.textItem"
                 };
-                debug!("{}, {}, {}", entry.path, mime, upnp_class);
+                debug!("{}, {}, {}", safe_entry_path, mime, upnp_class);
                 // inject video file template
                 didl_entries.push_str(&format!(
                     include_str!("../../assets/didl_item.xml"),
-                    entry.path, //
-                    safe_name,
+                    safe_entry_path, //
+                    safe_entry_name,
                     upnp_class,
                     mime,
                     entry.size,
