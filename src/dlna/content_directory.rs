@@ -9,7 +9,9 @@ const XML_CD_SYSTEM_UPDATE: &str = include_str!("../../assets/cd_system_update.x
 const SOAP_BROWSE_WRAPPER: &str = include_str!("../../assets/soap_browse_wrapper.xml");
 
 fn safe_replace(s: &str) -> String {
-    s.replace('&', ".") //
+    // escape all chars that will break listing in DeoVR
+    s //
+        .replace('&', ".")
         .replace('<', "(")
         .replace('>', ")")
         .replace('"', "'")
